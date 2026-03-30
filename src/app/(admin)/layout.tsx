@@ -36,7 +36,7 @@ export default function AdminLayout({
           {/* Header */}
           <AppHeader />
           {/* Page Content */}
-          <main className="flex-1 overflow-y-auto no-scrollbar">{children}</main>
+          <main className="flex-1 overflow-y-auto">{children}</main>
         </div>
       </div>
     </ProtectedRoute>

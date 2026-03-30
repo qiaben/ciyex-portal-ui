@@ -192,16 +192,31 @@
   }
   body {
     @apply relative font-normal font-outfit z-1 bg-gray-50;
-    overflow: hidden;
   }
-  /* Hide all scrollbars globally for a clean UI */
-  *::-webkit-scrollbar {
-    width: 0px;
-    height: 0px;
-  }
+  /* Thin, auto-hiding scrollbar for all scrollable areas */
   * {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+  *:hover {
+    scrollbar-color: rgba(156, 163, 175, 0.4) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 9999px;
+  }
+  *:hover::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.4);
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(156, 163, 175, 0.7);
   }
 }
 
