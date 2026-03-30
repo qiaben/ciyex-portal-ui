@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import AdminLayout from "@/app/(admin)/layout";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { Video, Calendar, Clock, AlertCircle } from "lucide-react";
+import Pagination from "@/components/tables/Pagination";
+
+const PAGE_SIZE = 10;
 
 type Appointment = {
     id?: number;
@@ -34,6 +37,10 @@ function isVirtual(vt?: string) {
 export default function TelehealthPage() {
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const totalPages = Math.ceil(appointments.length / PAGE_SIZE);
+    const paginatedAppointments = appointments.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     useEffect(() => {
         (async () => {
@@ -78,7 +85,7 @@ export default function TelehealthPage() {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {appointments.map((a, i) => (
+                        {paginatedAppointments.map((a, i) => (
                             <div key={a.id || i} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="flex items-start gap-4">
@@ -115,6 +122,12 @@ export default function TelehealthPage() {
                             <AlertCircle className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
                             <p className="text-xs text-blue-700">Ensure your camera and microphone are enabled before joining. Your provider will start the session when ready.</p>
                         </div>
+                        {totalPages > 1 && (
+                            <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100 bg-gray-50/30">
+                                <span className="text-xs text-gray-500">Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, appointments.length)} of {appointments.length}</span>
+                                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
