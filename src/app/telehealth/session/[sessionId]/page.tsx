@@ -190,7 +190,10 @@ export default function PatientTelehealthSessionPage() {
                         <div className="flex-1 overflow-y-auto p-3 space-y-2">
                             {chatMessages.map((msg, i) => (
                                 <div key={i} className={`text-sm ${msg.senderName === displayName ? "text-right" : ""}`}>
-                                    <span className="text-gray-500 text-xs">{msg.senderName}</span>
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <span className="text-gray-500 text-xs">{msg.senderName}</span>
+                                        {msg.sentAt && <span className="text-gray-400 text-[10px]">{new Date(msg.sentAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}
+                                    </div>
                                     <p className={`px-3 py-1.5 rounded-lg inline-block max-w-[90%] ${
                                         msg.senderName === displayName
                                             ? "bg-blue-600 text-white"

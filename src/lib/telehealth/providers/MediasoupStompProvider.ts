@@ -119,6 +119,13 @@ export class MediasoupStompProvider implements VideoCallProvider {
                     }
                 });
 
+                stompClient.subscribe(`/topic/session/${sid}/state`, (msg) => {
+                    const p = JSON.parse(msg.body);
+                    if (p.type === "producer-toggled" && p.peerId !== uid) {
+                        console.log(`[telehealth] Remote peer ${p.peerId} ${p.paused ? "muted" : "unmuted"} ${p.kind}`);
+                    }
+                });
+
                 stompClient.subscribe(`/topic/session/${sid}/chat`, (msg) => {
                     const p = JSON.parse(msg.body);
                     (this as any)._chatAppend?.(p);
@@ -334,7 +341,7 @@ export class MediasoupStompProvider implements VideoCallProvider {
         if (!this.stompClient?.connected) return; // Guard: no-op if not connected
         this.stompClient.publish({
             destination: `/app/session/${this.sessionId}/chat`,
-            body: JSON.stringify({ senderId, senderName, content }),
+            body: JSON.stringify({ senderId: this.userId, senderName, content }),
         });
     }
 
