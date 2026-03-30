@@ -1,8 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import AdminLayout from "@/app/(admin)/layout";
 import { useVitals } from "@/hooks/useVitals";
 import { Activity, Heart, Thermometer, Wind, Scale, AlertCircle } from "lucide-react";
+import Pagination from "@/components/tables/Pagination";
+
+const PAGE_SIZE = 10;
 
 function statusColor(value: number, low: number, high: number) {
     if (value >= high) return "bg-red-100 text-red-700";
@@ -12,6 +16,10 @@ function statusColor(value: number, low: number, high: number) {
 
 export default function VitalsPage() {
     const { vitals, loading, error } = useVitals();
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const totalPages = Math.ceil(vitals.length / PAGE_SIZE);
+    const paginatedVitals = vitals.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     return (
         <AdminLayout>
@@ -63,7 +71,7 @@ export default function VitalsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {vitals.map((v: any, i: number) => (
+                                    {paginatedVitals.map((v: any, i: number) => (
                                         <tr key={v.id || i} className="hover:bg-gray-50/50 transition-colors">
                                             <td className="px-4 py-3">
                                                 {v.bpSystolic && v.bpDiastolic ? (
@@ -108,8 +116,13 @@ export default function VitalsPage() {
                             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500" /> Normal</span>
                             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Elevated</span>
                             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> High</span>
-                            <span className="ml-auto">{vitals.length} record{vitals.length !== 1 ? "s" : ""}</span>
+                            <span className="ml-auto">Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, vitals.length)} of {vitals.length}</span>
                         </div>
+                        {totalPages > 1 && (
+                            <div className="flex justify-end px-4 py-3 border-t border-gray-100 bg-gray-50/30">
+                                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

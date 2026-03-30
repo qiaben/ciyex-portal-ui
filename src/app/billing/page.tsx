@@ -1,8 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import AdminLayout from "@/app/(admin)/layout";
 import { useBilling } from "@/hooks/useBilling";
 import { Receipt, DollarSign, Clock, AlertCircle } from "lucide-react";
+import Pagination from "@/components/tables/Pagination";
+
+const PAGE_SIZE = 10;
 
 function statusBadge(status?: string) {
     const s = (status || "").toLowerCase();
@@ -30,6 +34,10 @@ function fmtMoney(v?: string) {
 
 export default function BillingPage() {
     const { invoices, loading, error } = useBilling();
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const totalPages = Math.ceil(invoices.length / PAGE_SIZE);
+    const paginatedInvoices = invoices.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     const totalAmount = invoices.reduce((sum, inv) => sum + (parseFloat(inv.totalGross || "0") || 0), 0);
     const pendingCount = invoices.filter(inv => inv.status === "issued" || inv.status === "draft").length;
@@ -101,7 +109,7 @@ export default function BillingPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
-                                        {invoices.map((inv: any, i: number) => (
+                                        {paginatedInvoices.map((inv: any, i: number) => (
                                             <tr key={inv.id || i} className="hover:bg-gray-50/50 transition-colors">
                                                 <td className="px-4 py-3">
                                                     <span className="text-sm font-medium text-gray-900">{inv.invoiceNumber || `INV-${inv.id}`}</span>
@@ -146,8 +154,13 @@ export default function BillingPage() {
                                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Issued</span>
                                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Draft</span>
                                 <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Cancelled</span>
-                                <span className="ml-auto">{invoices.length} invoice{invoices.length !== 1 ? "s" : ""}</span>
+                                <span className="ml-auto">Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, invoices.length)} of {invoices.length}</span>
                             </div>
+                            {totalPages > 1 && (
+                                <div className="flex justify-end px-4 py-3 border-t border-gray-100 bg-gray-50/30">
+                                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                                </div>
+                            )}
                         </div>
                     </>
                 )}

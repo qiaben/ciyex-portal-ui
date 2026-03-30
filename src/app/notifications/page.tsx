@@ -1,8 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import AdminLayout from "@/app/(admin)/layout";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Bell, CheckCheck, AlertCircle } from "lucide-react";
+import Pagination from "@/components/tables/Pagination";
+
+const PAGE_SIZE = 10;
 
 function formatTime(dateString: string) {
     const date = new Date(dateString);
@@ -31,6 +35,10 @@ function getNotificationIcon(type: string) {
 
 export default function NotificationsPage() {
     const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = useNotifications();
+    const [currentPage, setCurrentPage] = useState(1);
+
+    const totalPages = Math.ceil(notifications.length / PAGE_SIZE);
+    const paginatedNotifications = notifications.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     return (
         <AdminLayout>
@@ -63,8 +71,9 @@ export default function NotificationsPage() {
                         <p className="text-sm text-gray-500 mt-1">You&apos;re all caught up! Notifications will appear here.</p>
                     </div>
                 ) : (
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
-                        {notifications.map((notification) => (
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="divide-y divide-gray-100">
+                        {paginatedNotifications.map((notification) => (
                             <div
                                 key={notification.id}
                                 onClick={() => {
@@ -92,6 +101,13 @@ export default function NotificationsPage() {
                                 )}
                             </div>
                         ))}
+                        </div>
+                        {totalPages > 1 && (
+                            <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100 bg-gray-50/30">
+                                <span className="text-xs text-gray-500">Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, notifications.length)} of {notifications.length}</span>
+                                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
