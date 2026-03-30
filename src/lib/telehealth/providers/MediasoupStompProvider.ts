@@ -7,6 +7,7 @@
  */
 
 import { Client } from "@stomp/stompjs";
+import * as SockJS from "sockjs-client";
 import type { VideoCallProvider, VideoCallSession, VideoCallState } from "../VideoCallProvider";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,13 +48,14 @@ export class MediasoupStompProvider implements VideoCallProvider {
         this.remoteVideoEl = remoteVideoEl;
         this.onStateChange = onStateChange;
 
-        // Build wsUrl from current page origin so WebSocket goes through the same
-        // Cloudflare-cleared domain the browser is already on (avoids cross-domain
-        // Cloudflare managed challenges that block WebSocket upgrades).
-        const protocol = typeof window !== "undefined" && window.location.protocol === "https:" ? "wss:" : "ws:";
+        // Build SockJS HTTP URL from current page origin so the connection goes through
+        // the same Cloudflare-cleared domain. SockJS tries WebSocket first, then falls
+        // back to XHR-streaming/polling — which bypasses Cloudflare managed challenges
+        // that block raw WebSocket upgrade requests.
+        const httpProtocol = typeof window !== "undefined" && window.location.protocol === "https:" ? "https:" : "http:";
         const host = typeof window !== "undefined" ? window.location.host : "";
-        const wsUrl = host ? `${protocol}//${host}/ws/telehealth` : session.joinInfo?.wsUrl;
-        if (!wsUrl) {
+        const sockjsUrl = host ? `${httpProtocol}//${host}/ws/telehealth` : session.joinInfo?.wsUrl?.replace(/^wss?:/, httpProtocol);
+        if (!sockjsUrl) {
             throw new Error("Session missing joinInfo.wsUrl — check that the telehealth vendor is configured in the marketplace");
         }
 
@@ -67,10 +69,10 @@ export class MediasoupStompProvider implements VideoCallProvider {
             onStateChange({ videoEnabled: false, audioEnabled: false });
         }
 
-        await this.connectSignaling(wsUrl, displayName);
+        await this.connectSignaling(sockjsUrl, displayName);
     }
 
-    private connectSignaling(wsUrl: string, displayName: string): Promise<void> {
+    private connectSignaling(sockjsUrl: string, displayName: string): Promise<void> {
         return new Promise((resolve, reject) => {
             // If the server never sends "joined" within 20s, surface an error instead of spinning forever.
             // This timeout is NOT cleared on STOMP connect — only when "joined" is received in setupMediasoup.
@@ -82,7 +84,9 @@ export class MediasoupStompProvider implements VideoCallProvider {
             }, 20000);
 
             const stompClient = new Client({
-                brokerURL: wsUrl,
+                // Use SockJS transport — tries WebSocket first, then falls back to
+                // XHR-streaming/polling which passes through Cloudflare managed challenges.
+                webSocketFactory: () => new SockJS(sockjsUrl) as any,
                 reconnectDelay: 5000,
                 heartbeatIncoming: 10000,
                 heartbeatOutgoing: 10000,
