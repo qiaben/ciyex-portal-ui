@@ -1,0 +1,34 @@
+name: Retag Dev Image to RC
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_tag:
+        description: 'Source image tag (e.g. 0.1.0-alpha.1)'
+        required: true
+      rc_tag:
+        description: 'RC image tag (e.g. 0.1.0-rc)'
+        required: true
+
+env:
+  IMAGE_NAME: ciyex-portal-ui
+  REGISTRY: ${{ secrets.REGISTRY_URL }}
+
+jobs:
+  retag:
+    name: Retag Image
+    runs-on: [self-hosted, linux, x64]
+    steps:
+      - name: Login to Registry
+        run: |
+          echo "${{ secrets.PROD_REGISTRY_PASSWORD }}" | docker login $REGISTRY -u ${{ secrets.PROD_REGISTRY_USERNAME }} --password-stdin
+
+      - name: Retag Image
+        run: |
+          SRC="${REGISTRY}/${IMAGE_NAME}:${{ inputs.source_tag }}"
+          DST="${REGISTRY}/${IMAGE_NAME}:${{ inputs.rc_tag }}"
+
+          docker pull $SRC
+          docker tag $SRC $DST
+          docker push $DST
+          echo "✅ Retagged $SRC → $DST"
