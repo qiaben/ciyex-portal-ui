@@ -2,6 +2,8 @@
 
 import AdminLayout from "@/app/(admin)/layout";
 import { useDocuments } from "@/hooks/useDocuments";
+import { usePagination } from "@/hooks/usePagination";
+import Pagination from "@/components/tables/Pagination";
 import { FileText, FolderOpen, Lock, AlertCircle, Download, Eye, Trash2 } from "lucide-react";
 
 function fmtDate(d?: string) {
@@ -25,6 +27,7 @@ function categoryBadge(cat?: string) {
 
 export default function DocumentsPage() {
     const { documents, loading, error, downloadDocument, viewDocument, deleteDocument } = useDocuments();
+    const { currentPage, totalPages, paginatedItems, onPageChange, totalItems, startItem, endItem } = usePagination(documents, 10);
 
     return (
         <AdminLayout>
@@ -93,7 +96,7 @@ export default function DocumentsPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
-                                        {documents.map((doc: any, i: number) => (
+                                        {paginatedItems.map((doc: any, i: number) => (
                                             <tr key={doc.id || i} className="hover:bg-gray-50/50 transition-colors">
                                                 <td className="px-4 py-3">
                                                     <span className="text-sm font-medium text-gray-900">{doc.fileName}</span>
@@ -133,9 +136,15 @@ export default function DocumentsPage() {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/30 text-xs text-gray-500 text-right">
-                                {documents.length} document{documents.length !== 1 ? "s" : ""}
-                            </div>
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={onPageChange}
+                                totalItems={totalItems}
+                                startItem={startItem}
+                                endItem={endItem}
+                                label="documents"
+                            />
                         </div>
                     </>
                 )}

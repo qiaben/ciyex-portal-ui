@@ -2,6 +2,8 @@
 
 import AdminLayout from "@/app/(admin)/layout";
 import { useBilling } from "@/hooks/useBilling";
+import { usePagination } from "@/hooks/usePagination";
+import Pagination from "@/components/tables/Pagination";
 import { Receipt, DollarSign, Clock, AlertCircle } from "lucide-react";
 
 function statusBadge(status?: string) {
@@ -30,6 +32,7 @@ function fmtMoney(v?: string) {
 
 export default function BillingPage() {
     const { invoices, loading, error } = useBilling();
+    const { currentPage, totalPages, paginatedItems, onPageChange, totalItems, startItem, endItem } = usePagination(invoices, 10);
 
     const totalAmount = invoices.reduce((sum, inv) => sum + (parseFloat(inv.totalGross || "0") || 0), 0);
     const pendingCount = invoices.filter(inv => inv.status === "issued" || inv.status === "draft").length;
@@ -101,7 +104,7 @@ export default function BillingPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
-                                        {invoices.map((inv: any, i: number) => (
+                                        {paginatedItems.map((inv: any, i: number) => (
                                             <tr key={inv.id || i} className="hover:bg-gray-50/50 transition-colors">
                                                 <td className="px-4 py-3">
                                                     <span className="text-sm font-medium text-gray-900">{inv.invoiceNumber || `INV-${inv.id}`}</span>
@@ -141,12 +144,22 @@ export default function BillingPage() {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/30 flex items-center gap-4 text-xs text-gray-500">
-                                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500" /> Paid</span>
-                                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Issued</span>
-                                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Draft</span>
-                                <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Cancelled</span>
-                                <span className="ml-auto">{invoices.length} invoice{invoices.length !== 1 ? "s" : ""}</span>
+                            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/30 flex items-center justify-between text-xs text-gray-500">
+                                <div className="flex items-center gap-4">
+                                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500" /> Paid</span>
+                                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-blue-500" /> Issued</span>
+                                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Draft</span>
+                                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500" /> Cancelled</span>
+                                </div>
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={onPageChange}
+                                    totalItems={totalItems}
+                                    startItem={startItem}
+                                    endItem={endItem}
+                                    label="invoices"
+                                />
                             </div>
                         </div>
                     </>

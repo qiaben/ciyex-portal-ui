@@ -2,6 +2,8 @@
 
 import AdminLayout from "@/app/(admin)/layout";
 import { useMedications } from "@/hooks/useMedications";
+import { usePagination } from "@/hooks/usePagination";
+import Pagination from "@/components/tables/Pagination";
 import { Pill, AlertCircle } from "lucide-react";
 
 function statusBadge(status?: string) {
@@ -23,6 +25,7 @@ function fmtDate(d: string) {
 
 export default function MedicationsPage() {
     const { medications, loading, error } = useMedications();
+    const { currentPage, totalPages, paginatedItems, onPageChange, totalItems, startItem, endItem } = usePagination(medications, 10);
 
     return (
         <AdminLayout>
@@ -65,7 +68,7 @@ export default function MedicationsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {medications.map((m: any, i: number) => (
+                                    {paginatedItems.map((m: any, i: number) => (
                                         <tr key={m.id || i} className="hover:bg-gray-50/50 transition-colors">
                                             <td className="px-4 py-3">
                                                 <span className="text-sm font-medium text-gray-900">{m.medicationName}</span>
@@ -80,8 +83,16 @@ export default function MedicationsPage() {
                                 </tbody>
                             </table>
                         </div>
-                        <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/30 text-xs text-gray-500 text-right">
-                            {medications.length} medication{medications.length !== 1 ? "s" : ""}
+                        <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/30 flex items-center justify-end text-xs text-gray-500">
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={onPageChange}
+                                totalItems={totalItems}
+                                startItem={startItem}
+                                endItem={endItem}
+                                label="medications"
+                            />
                         </div>
                     </div>
                 )}

@@ -187,8 +187,21 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply relative font-normal font-outfit z-1 bg-gray-50;
+    overflow: hidden;
+  }
+  /* Hide all scrollbars globally for a clean UI */
+  *::-webkit-scrollbar {
+    width: 0px;
+    height: 0px;
+  }
+  * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 

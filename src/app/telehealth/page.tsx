@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import AdminLayout from "@/app/(admin)/layout";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { Video, Calendar, Clock, AlertCircle } from "lucide-react";
+import { usePagination } from "@/hooks/usePagination";
+import Pagination from "@/components/tables/Pagination";
 
 type Appointment = {
     id?: number;
@@ -34,6 +36,8 @@ function isVirtual(vt?: string) {
 export default function TelehealthPage() {
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const { currentPage, totalPages, paginatedItems, onPageChange, totalItems, startItem, endItem } = usePagination(appointments, 10);
 
     useEffect(() => {
         (async () => {
@@ -78,7 +82,7 @@ export default function TelehealthPage() {
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        {appointments.map((a, i) => (
+                        {paginatedItems.map((a, i) => (
                             <div key={a.id || i} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="flex items-start gap-4">
@@ -111,6 +115,15 @@ export default function TelehealthPage() {
                                 </div>
                             </div>
                         ))}
+                        <Pagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={onPageChange}
+                            totalItems={totalItems}
+                            startItem={startItem}
+                            endItem={endItem}
+                            label="appointments"
+                        />
                         <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
                             <AlertCircle className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
                             <p className="text-xs text-blue-700">Ensure your camera and microphone are enabled before joining. Your provider will start the session when ready.</p>

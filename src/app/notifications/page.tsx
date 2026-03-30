@@ -3,6 +3,8 @@
 import AdminLayout from "@/app/(admin)/layout";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Bell, CheckCheck, AlertCircle } from "lucide-react";
+import { usePagination } from "@/hooks/usePagination";
+import Pagination from "@/components/tables/Pagination";
 
 function formatTime(dateString: string) {
     const date = new Date(dateString);
@@ -31,6 +33,7 @@ function getNotificationIcon(type: string) {
 
 export default function NotificationsPage() {
     const { notifications, unreadCount, loading, markAsRead, markAllAsRead } = useNotifications();
+    const { currentPage, totalPages, paginatedItems, onPageChange, totalItems, startItem, endItem } = usePagination(notifications, 10);
 
     return (
         <AdminLayout>
@@ -63,8 +66,9 @@ export default function NotificationsPage() {
                         <p className="text-sm text-gray-500 mt-1">You&apos;re all caught up! Notifications will appear here.</p>
                     </div>
                 ) : (
+                    <>
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
-                        {notifications.map((notification) => (
+                        {paginatedItems.map((notification) => (
                             <div
                                 key={notification.id}
                                 onClick={() => {
@@ -93,6 +97,16 @@ export default function NotificationsPage() {
                             </div>
                         ))}
                     </div>
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={onPageChange}
+                        totalItems={totalItems}
+                        startItem={startItem}
+                        endItem={endItem}
+                        label="notifications"
+                    />
+                    </>
                 )}
             </div>
         </AdminLayout>

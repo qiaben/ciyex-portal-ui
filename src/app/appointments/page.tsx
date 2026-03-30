@@ -5,6 +5,8 @@ import AdminLayout from "@/app/(admin)/layout";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { useRouter } from "next/navigation";
 import { Calendar, Plus, X, Eye, Video, Clock, MapPin, AlertCircle, Loader2 } from "lucide-react";
+import { usePagination } from "@/hooks/usePagination";
+import Pagination from "@/components/tables/Pagination";
 
 async function safeJson(res: Response) {
     const text = await res.text();
@@ -300,6 +302,8 @@ export default function AppointmentsPage() {
         return s.includes("virtual") || s.includes("telehealth") || s.includes("video") || s.includes("online") || s.includes("remote");
     }
 
+    const { currentPage, totalPages, paginatedItems, onPageChange, totalItems, startItem, endItem } = usePagination(appointments, 10);
+
     const dateOptions = Array.from({ length: 30 }, (_, i) => {
         const d = new Date(); d.setDate(d.getDate() + i);
         const val = d.toISOString().split("T")[0];
@@ -353,7 +357,7 @@ export default function AppointmentsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {appointments.map((a, i) => {
+                                    {paginatedItems.map((a, i) => {
                                         const loc = locations.find((l) => l.id === a.locationId);
                                         const prov = providers.find((p) => p.id === a.providerId);
                                         return (
@@ -395,9 +399,15 @@ export default function AppointmentsPage() {
                                 </tbody>
                             </table>
                         </div>
-                        <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/30 text-xs text-gray-500 text-right">
-                            {appointments.length} appointment{appointments.length !== 1 ? "s" : ""}
-                        </div>
+                        <Pagination
+                            currentPage={currentPage}
+                            totalPages={totalPages}
+                            onPageChange={onPageChange}
+                            totalItems={totalItems}
+                            startItem={startItem}
+                            endItem={endItem}
+                            label="appointments"
+                        />
                     </div>
                 )}
             </div>

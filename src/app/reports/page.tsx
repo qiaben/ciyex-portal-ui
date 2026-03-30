@@ -3,6 +3,8 @@
 import AdminLayout from "@/app/(admin)/layout";
 import { useDocuments } from "@/hooks/useDocuments";
 import { useReports, ApiReport } from "@/hooks/useReports";
+import { usePagination } from "@/hooks/usePagination";
+import Pagination from "@/components/tables/Pagination";
 import { BarChart3, FolderOpen, Lock, AlertCircle, Eye, Download, Archive, X } from "lucide-react";
 import { useState } from "react";
 
@@ -53,6 +55,7 @@ export default function ReportsPage() {
     // Documents from the documents endpoint are actual files (DocumentReferences with S3 storage).
     const isShowingReports = reports.length > 0;
     const displayItems = isShowingReports ? reports : docs;
+    const { currentPage, totalPages, paginatedItems, onPageChange, totalItems, startItem, endItem } = usePagination(displayItems, 10);
 
     return (
         <AdminLayout>
@@ -121,7 +124,7 @@ export default function ReportsPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
-                                        {displayItems.map((report: any, i: number) => (
+                                        {paginatedItems.map((report: any, i: number) => (
                                             <tr key={report.id || i} className="hover:bg-gray-50/50 transition-colors">
                                                 <td className="px-4 py-3">
                                                     <span className="text-sm font-medium text-gray-900">{report.fileName}</span>
@@ -176,9 +179,15 @@ export default function ReportsPage() {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/30 text-xs text-gray-500 text-right">
-                                {displayItems.length} report{displayItems.length !== 1 ? "s" : ""}
-                            </div>
+                            <Pagination
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={onPageChange}
+                                totalItems={totalItems}
+                                startItem={startItem}
+                                endItem={endItem}
+                                label="reports"
+                            />
                         </div>
                     </>
                 )}

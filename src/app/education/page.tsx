@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import AdminLayout from "@/app/(admin)/layout";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { BookOpen, AlertCircle, X, Globe, CheckCircle2 } from "lucide-react";
+import { usePagination } from "@/hooks/usePagination";
+import Pagination from "@/components/tables/Pagination";
 
 type Topic = { id: string; title: string; summary: string; category: string; language: string; readingLevel: string; content: string; fhirId?: string };
 type Assignment = { id: string; patientId: string; patientName: string; notes: string; delivered: boolean; assignedDate: string; topic: Topic };
@@ -76,6 +78,8 @@ export default function PatientEducationPage() {
         ? assignments.map((a) => a.topic || ((a as any).topicId && topics.find((t) => t.id === (a as any).topicId)) || null).filter(Boolean) as Topic[]
         : topics;
 
+    const { currentPage, totalPages, paginatedItems, onPageChange, totalItems, startItem, endItem } = usePagination(displayTopics, 9);
+
     if (!mounted) {
         return <AdminLayout><div className="flex items-center justify-center py-20"><div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full" /></div></AdminLayout>;
     }
@@ -124,8 +128,9 @@ export default function PatientEducationPage() {
                         </p>
                     </div>
                 ) : (
+                    <>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {displayTopics.map((topic) => {
+                        {paginatedItems.map((topic) => {
                             const assignment = assignments.find((a) => a.topic?.id === topic.id);
                             return (
                                 <div key={topic.id} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:border-blue-300 transition-colors overflow-hidden">
@@ -168,6 +173,16 @@ export default function PatientEducationPage() {
                             );
                         })}
                     </div>
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={onPageChange}
+                        totalItems={totalItems}
+                        startItem={startItem}
+                        endItem={endItem}
+                        label="topics"
+                    />
+                    </>
                 )}
             </div>
 
