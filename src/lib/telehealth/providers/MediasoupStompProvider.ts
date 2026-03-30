@@ -7,7 +7,8 @@
  */
 
 import { Client } from "@stomp/stompjs";
-import * as SockJS from "sockjs-client";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const SockJS = require("sockjs-client");
 import type { VideoCallProvider, VideoCallSession, VideoCallState } from "../VideoCallProvider";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
