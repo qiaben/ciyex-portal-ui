@@ -5,9 +5,6 @@ import AdminLayout from "@/app/(admin)/layout";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { useRouter } from "next/navigation";
 import { Calendar, Plus, X, Eye, Video, Clock, MapPin, AlertCircle, Loader2 } from "lucide-react";
-import Pagination from "@/components/tables/Pagination";
-
-const PAGE_SIZE = 10;
 
 async function safeJson(res: Response) {
     const text = await res.text();
@@ -60,7 +57,6 @@ export default function AppointmentsPage() {
     const [fetchingSlots, setFetchingSlots] = useState(false);
     const [alert, setAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-    const [currentPage, setCurrentPage] = useState(1);
     const [form, setForm] = useState({ providerId: "", locationId: "", date: "", time: "", reason: "", visitType: "", priority: "" });
 
     useEffect(() => { if (alert) { const t = setTimeout(() => setAlert(null), 5000); return () => clearTimeout(t); } }, [alert]);
@@ -357,7 +353,7 @@ export default function AppointmentsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {appointments.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((a, i) => {
+                                    {appointments.map((a, i) => {
                                         const loc = locations.find((l) => l.id === a.locationId);
                                         const prov = providers.find((p) => p.id === a.providerId);
                                         return (
@@ -399,11 +395,8 @@ export default function AppointmentsPage() {
                                 </tbody>
                             </table>
                         </div>
-                        <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100 bg-gray-50/30">
-                            <span className="text-xs text-gray-500">Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, appointments.length)} of {appointments.length}</span>
-                            {Math.ceil(appointments.length / PAGE_SIZE) > 1 && (
-                                <Pagination currentPage={currentPage} totalPages={Math.ceil(appointments.length / PAGE_SIZE)} onPageChange={setCurrentPage} />
-                            )}
+                        <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/30 text-xs text-gray-500 text-right">
+                            {appointments.length} appointment{appointments.length !== 1 ? "s" : ""}
                         </div>
                     </div>
                 )}

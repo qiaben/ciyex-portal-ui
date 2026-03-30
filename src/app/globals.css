@@ -2,17 +2,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Global scrollbar hide — smooth scroll, no visible scrollbar anywhere */
-*,
-*::before,
-*::after {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
-}
-*::-webkit-scrollbar {
-  display: none; /* Chrome/Safari/Opera */
-}
-
 @theme {
   --font-*: initial;
   --font-outfit: Outfit, sans-serif;

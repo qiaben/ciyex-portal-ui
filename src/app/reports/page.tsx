@@ -5,9 +5,6 @@ import { useDocuments } from "@/hooks/useDocuments";
 import { useReports, ApiReport } from "@/hooks/useReports";
 import { BarChart3, FolderOpen, Lock, AlertCircle, Eye, Download, Archive, X } from "lucide-react";
 import { useState } from "react";
-import Pagination from "@/components/tables/Pagination";
-
-const PAGE_SIZE = 10;
 
 function fmtDate(d?: string) {
     if (!d) return "—";
@@ -48,7 +45,6 @@ export default function ReportsPage() {
     const { reports, loading: reportsLoading, error: reportsError } = useReports();
     const { documents: docs, loading: docsLoading, error: docsError, downloadDocument, viewDocument, archiveDocument } = useDocuments();
     const [selectedReport, setSelectedReport] = useState<ApiReport | null>(null);
-    const [currentPage, setCurrentPage] = useState(1);
 
     const loading = reportsLoading || docsLoading;
     const error = reportsError && docsError ? (reportsError || docsError) : null;
@@ -125,7 +121,7 @@ export default function ReportsPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
-                                        {displayItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((report: any, i: number) => (
+                                        {displayItems.map((report: any, i: number) => (
                                             <tr key={report.id || i} className="hover:bg-gray-50/50 transition-colors">
                                                 <td className="px-4 py-3">
                                                     <span className="text-sm font-medium text-gray-900">{report.fileName}</span>
@@ -180,11 +176,8 @@ export default function ReportsPage() {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100 bg-gray-50/30">
-                                <span className="text-xs text-gray-500">Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, displayItems.length)} of {displayItems.length}</span>
-                                {Math.ceil(displayItems.length / PAGE_SIZE) > 1 && (
-                                    <Pagination currentPage={currentPage} totalPages={Math.ceil(displayItems.length / PAGE_SIZE)} onPageChange={setCurrentPage} />
-                                )}
+                            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/30 text-xs text-gray-500 text-right">
+                                {displayItems.length} report{displayItems.length !== 1 ? "s" : ""}
                             </div>
                         </div>
                     </>

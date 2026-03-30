@@ -5,9 +5,6 @@ import AdminLayout from "@/app/(admin)/layout";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { safeStr } from "@/utils/safeStr";
 import { FlaskConical, AlertCircle, Eye, X } from "lucide-react";
-import Pagination from "@/components/tables/Pagination";
-
-const PAGE_SIZE = 10;
 
 type LabOrder = {
     id: number;
@@ -56,7 +53,6 @@ export default function LabsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [viewer, setViewer] = useState<LabOrder | null>(null);
-    const [currentPage, setCurrentPage] = useState(1);
 
     const loadLabs = useCallback(async () => {
         try {
@@ -127,7 +123,7 @@ export default function LabsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {labs.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((lab, i) => (
+                                    {labs.map((lab, i) => (
                                         <tr key={lab.id || i} className="hover:bg-gray-50/50 transition-colors">
                                             <td className="px-4 py-3">
                                                 <span className="text-sm font-medium text-gray-900">{lab.testName}</span>
@@ -149,11 +145,8 @@ export default function LabsPage() {
                                 </tbody>
                             </table>
                         </div>
-                        <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100 bg-gray-50/30">
-                            <span className="text-xs text-gray-500">Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, labs.length)} of {labs.length}</span>
-                            {Math.ceil(labs.length / PAGE_SIZE) > 1 && (
-                                <Pagination currentPage={currentPage} totalPages={Math.ceil(labs.length / PAGE_SIZE)} onPageChange={setCurrentPage} />
-                            )}
+                        <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/30 text-xs text-gray-500 text-right">
+                            {labs.length} order{labs.length !== 1 ? "s" : ""}
                         </div>
                     </div>
                 )}

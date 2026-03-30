@@ -1,12 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import AdminLayout from "@/app/(admin)/layout";
 import { useDocuments } from "@/hooks/useDocuments";
 import { FileText, FolderOpen, Lock, AlertCircle, Download, Eye, Trash2 } from "lucide-react";
-import Pagination from "@/components/tables/Pagination";
-
-const PAGE_SIZE = 10;
 
 function fmtDate(d?: string) {
     if (!d) return "—";
@@ -29,10 +25,6 @@ function categoryBadge(cat?: string) {
 
 export default function DocumentsPage() {
     const { documents, loading, error, downloadDocument, viewDocument, deleteDocument } = useDocuments();
-    const [currentPage, setCurrentPage] = useState(1);
-
-    const totalPages = Math.ceil(documents.length / PAGE_SIZE);
-    const paginatedDocuments = documents.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     return (
         <AdminLayout>
@@ -101,7 +93,7 @@ export default function DocumentsPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
-                                        {paginatedDocuments.map((doc: any, i: number) => (
+                                        {documents.map((doc: any, i: number) => (
                                             <tr key={doc.id || i} className="hover:bg-gray-50/50 transition-colors">
                                                 <td className="px-4 py-3">
                                                     <span className="text-sm font-medium text-gray-900">{doc.fileName}</span>
@@ -141,11 +133,8 @@ export default function DocumentsPage() {
                                     </tbody>
                                 </table>
                             </div>
-                            <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100 bg-gray-50/30">
-                                <span className="text-xs text-gray-500">Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, documents.length)} of {documents.length}</span>
-                                {totalPages > 1 && (
-                                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                                )}
+                            <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/30 text-xs text-gray-500 text-right">
+                                {documents.length} document{documents.length !== 1 ? "s" : ""}
                             </div>
                         </div>
                     </>

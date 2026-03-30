@@ -1,12 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import AdminLayout from "@/app/(admin)/layout";
 import { useMedications } from "@/hooks/useMedications";
 import { Pill, AlertCircle } from "lucide-react";
-import Pagination from "@/components/tables/Pagination";
-
-const PAGE_SIZE = 10;
 
 function statusBadge(status?: string) {
     const s = (status || "").toLowerCase();
@@ -27,10 +23,6 @@ function fmtDate(d: string) {
 
 export default function MedicationsPage() {
     const { medications, loading, error } = useMedications();
-    const [currentPage, setCurrentPage] = useState(1);
-
-    const totalPages = Math.ceil(medications.length / PAGE_SIZE);
-    const paginatedMedications = medications.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     return (
         <AdminLayout>
@@ -73,7 +65,7 @@ export default function MedicationsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {paginatedMedications.map((m: any, i: number) => (
+                                    {medications.map((m: any, i: number) => (
                                         <tr key={m.id || i} className="hover:bg-gray-50/50 transition-colors">
                                             <td className="px-4 py-3">
                                                 <span className="text-sm font-medium text-gray-900">{m.medicationName}</span>
@@ -88,11 +80,8 @@ export default function MedicationsPage() {
                                 </tbody>
                             </table>
                         </div>
-                        <div className="flex justify-between items-center px-4 py-3 border-t border-gray-100 bg-gray-50/30">
-                            <span className="text-xs text-gray-500">Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, medications.length)} of {medications.length}</span>
-                            {totalPages > 1 && (
-                                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
-                            )}
+                        <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/30 text-xs text-gray-500 text-right">
+                            {medications.length} medication{medications.length !== 1 ? "s" : ""}
                         </div>
                     </div>
                 )}

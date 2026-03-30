@@ -4,9 +4,6 @@ import { useEffect, useState, useCallback } from "react";
 import AdminLayout from "@/app/(admin)/layout";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { BookOpen, AlertCircle, X, Globe, CheckCircle2 } from "lucide-react";
-import Pagination from "@/components/tables/Pagination";
-
-const PAGE_SIZE = 10;
 
 type Topic = { id: string; title: string; summary: string; category: string; language: string; readingLevel: string; content: string; fhirId?: string };
 type Assignment = { id: string; patientId: string; patientName: string; notes: string; delivered: boolean; assignedDate: string; topic: Topic };
@@ -18,7 +15,6 @@ export default function PatientEducationPage() {
     const [selected, setSelected] = useState<Topic | null>(null);
     const [viewMode, setViewMode] = useState<"assigned" | "all">("assigned");
     const [error, setError] = useState<string | null>(null);
-    const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => { setMounted(true); }, []);
 
@@ -95,13 +91,13 @@ export default function PatientEducationPage() {
                     </div>
                     <div className="bg-white border border-gray-200 rounded-lg p-0.5 flex">
                         <button
-                            onClick={() => { setViewMode("assigned"); setCurrentPage(1); }}
+                            onClick={() => setViewMode("assigned")}
                             className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === "assigned" ? "bg-blue-600 text-white" : "text-gray-600 hover:text-gray-900"}`}
                         >
                             My Topics ({assignments.length})
                         </button>
                         <button
-                            onClick={() => { setViewMode("all"); setCurrentPage(1); }}
+                            onClick={() => setViewMode("all")}
                             className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === "all" ? "bg-blue-600 text-white" : "text-gray-600 hover:text-gray-900"}`}
                         >
                             All Topics ({topics.length})
@@ -128,9 +124,8 @@ export default function PatientEducationPage() {
                         </p>
                     </div>
                 ) : (
-                    <>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {displayTopics.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map((topic) => {
+                        {displayTopics.map((topic) => {
                             const assignment = assignments.find((a) => a.topic?.id === topic.id);
                             return (
                                 <div key={topic.id} className="bg-white rounded-xl border border-gray-200 shadow-sm hover:border-blue-300 transition-colors overflow-hidden">
@@ -173,13 +168,6 @@ export default function PatientEducationPage() {
                             );
                         })}
                     </div>
-                    {Math.ceil(displayTopics.length / PAGE_SIZE) > 1 && (
-                        <div className="flex justify-between items-center mt-4">
-                            <span className="text-xs text-gray-500">Showing {((currentPage - 1) * PAGE_SIZE) + 1}–{Math.min(currentPage * PAGE_SIZE, displayTopics.length)} of {displayTopics.length}</span>
-                            <Pagination currentPage={currentPage} totalPages={Math.ceil(displayTopics.length / PAGE_SIZE)} onPageChange={setCurrentPage} />
-                        </div>
-                    )}
-                    </>
                 )}
             </div>
 

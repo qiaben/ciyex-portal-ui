@@ -4,9 +4,6 @@ import { useState, useEffect } from "react";
 import AdminLayout from "@/app/(admin)/layout";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { AlertTriangle, FileText, Plus, Trash2, Pencil, Save, X, AlertCircle } from "lucide-react";
-import Pagination from "@/components/tables/Pagination";
-
-const PAGE_SIZE = 10;
 
 type Allergy = { id: number; substance: string; reaction: string; severity: "Mild" | "Moderate" | "Severe" };
 type HistoryItem = { id: number; type: "Condition" | "Surgery" | "Family"; description: string; year?: string };
@@ -26,13 +23,6 @@ export default function AllergiesPage() {
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [editMode, setEditMode] = useState(false);
     const [alert, setAlert] = useState<{ type: "success" | "error"; message: string } | null>(null);
-    const [allergyPage, setAllergyPage] = useState(1);
-    const [historyPage, setHistoryPage] = useState(1);
-
-    const allergyTotalPages = Math.ceil(allergies.length / PAGE_SIZE);
-    const paginatedAllergies = editMode ? allergies : allergies.slice((allergyPage - 1) * PAGE_SIZE, allergyPage * PAGE_SIZE);
-    const historyTotalPages = Math.ceil(history.length / PAGE_SIZE);
-    const paginatedHistory = editMode ? history : history.slice((historyPage - 1) * PAGE_SIZE, historyPage * PAGE_SIZE);
 
     useEffect(() => { if (alert) { const t = setTimeout(() => setAlert(null), 4000); return () => clearTimeout(t); } }, [alert]);
 
@@ -164,7 +154,7 @@ export default function AllergiesPage() {
                                     <p className="text-sm text-gray-500">No allergies recorded</p>
                                 </div>
                             ) : (
-                                paginatedAllergies.map((a) => (
+                                allergies.map((a) => (
                                     <div key={a.id} className="border border-gray-200 rounded-lg p-3">
                                         {editMode ? (
                                             <div className="space-y-2">
@@ -198,12 +188,6 @@ export default function AllergiesPage() {
                                     <Plus className="h-4 w-4" /> Add Allergy
                                 </button>
                             )}
-                            {!editMode && allergyTotalPages > 1 && (
-                                <div className="flex justify-between items-center pt-2">
-                                    <span className="text-xs text-gray-500">Showing {((allergyPage - 1) * PAGE_SIZE) + 1}–{Math.min(allergyPage * PAGE_SIZE, allergies.length)} of {allergies.length}</span>
-                                    <Pagination currentPage={allergyPage} totalPages={allergyTotalPages} onPageChange={setAllergyPage} />
-                                </div>
-                            )}
                         </div>
                     </div>
 
@@ -221,7 +205,7 @@ export default function AllergiesPage() {
                                     <p className="text-sm text-gray-500">No medical history recorded</p>
                                 </div>
                             ) : (
-                                paginatedHistory.map((h) => (
+                                history.map((h) => (
                                     <div key={h.id} className="border border-gray-200 rounded-lg p-3">
                                         {editMode ? (
                                             <div className="space-y-2">
@@ -254,12 +238,6 @@ export default function AllergiesPage() {
                                     className="w-full flex items-center justify-center gap-1.5 py-2 text-sm text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-dashed border-gray-300">
                                     <Plus className="h-4 w-4" /> Add History
                                 </button>
-                            )}
-                            {!editMode && historyTotalPages > 1 && (
-                                <div className="flex justify-between items-center pt-2">
-                                    <span className="text-xs text-gray-500">Showing {((historyPage - 1) * PAGE_SIZE) + 1}–{Math.min(historyPage * PAGE_SIZE, history.length)} of {history.length}</span>
-                                    <Pagination currentPage={historyPage} totalPages={historyTotalPages} onPageChange={setHistoryPage} />
-                                </div>
                             )}
                         </div>
                     </div>
