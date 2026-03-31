@@ -88,9 +88,10 @@ export class MediasoupStompProvider implements VideoCallProvider {
             }, 20000);
 
             const stompClient = new Client({
-                // Use SockJS transport — tries WebSocket first, then falls back to
-                // XHR-streaming/polling which passes through Cloudflare managed challenges.
-                webSocketFactory: () => new SockJS(sockjsUrl, null, { transports: ["xhr-streaming", "xhr-polling"] }) as any,
+                // Use SockJS with WebSocket first (Cloudflare Tunnel proxies WS natively),
+                // then XHR-polling as fallback. XHR-streaming is excluded because Cloudflare
+                // Tunnel's QUIC protocol kills long-lived HTTP streaming connections.
+                webSocketFactory: () => new SockJS(sockjsUrl, null, { transports: ["websocket", "xhr-polling"] }) as any,
                 reconnectDelay: 5000,
                 heartbeatIncoming: 10000,
                 heartbeatOutgoing: 10000,
