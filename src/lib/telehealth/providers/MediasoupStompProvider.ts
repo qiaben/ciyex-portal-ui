@@ -49,13 +49,13 @@ export class MediasoupStompProvider implements VideoCallProvider {
         this.remoteVideoEl = remoteVideoEl;
         this.onStateChange = onStateChange;
 
-        // Build SockJS HTTP URL from current page origin so the connection goes through
-        // the same Cloudflare-cleared domain. SockJS tries WebSocket first, then falls
-        // back to XHR-streaming/polling — which bypasses Cloudflare managed challenges
-        // that block raw WebSocket upgrade requests.
+        // Use the server-provided WebSocket URL for signaling.
+        // Convert ws(s): to http(s): since SockJS uses XHR-streaming transport (not raw WebSocket),
+        // which passes through Cloudflare managed challenges without issue.
         const httpProtocol = typeof window !== "undefined" && window.location.protocol === "https:" ? "https:" : "http:";
-        const host = typeof window !== "undefined" ? window.location.host : "";
-        const sockjsUrl = host ? `${httpProtocol}//${host}/ws/telehealth` : session.joinInfo?.wsUrl?.replace(/^wss?:/, httpProtocol);
+        const sockjsUrl = session.joinInfo?.wsUrl
+            ? session.joinInfo.wsUrl.replace(/^wss?:/, httpProtocol)
+            : null;
         if (!sockjsUrl) {
             throw new Error("Session missing joinInfo.wsUrl — check that the telehealth vendor is configured in the marketplace");
         }
