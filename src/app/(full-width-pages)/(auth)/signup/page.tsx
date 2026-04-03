@@ -245,8 +245,9 @@ export default function SignUpPage() {
   <div className="relative z-10 space-y-8">
     {/* Logo & Title */}
     <div>
+      <img src="/images/ciyex-connect-logo.png" alt="Ciyex" className="h-14 mb-2 drop-shadow-lg" />
       <h1 className="text-5xl font-extrabold mb-3 tracking-tight flex items-center gap-3">
-        ✨ Ciyex Connect
+        Ciyex Connect
       </h1>
       <p className="text-xl md:text-2xl font-semibold leading-snug">
         Your Health. <span className="font-extrabold">Your Control.</span>

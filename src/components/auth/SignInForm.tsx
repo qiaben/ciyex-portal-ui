@@ -328,7 +328,7 @@ export default function SignInForm() {
             <div className="hidden lg:flex flex-col items-center justify-center p-12 text-white relative overflow-hidden" style={{ background: "linear-gradient(135deg, #7c3aed 0%, #3b82f6 50%, #06b6d4 100%)" }}>
                 <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle at 25% 25%, white 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
                 <div className="z-10 flex flex-col items-center max-w-lg">
-                    <img src="/images/logo/logo-icon.svg" alt="Ciyex" className="w-20 h-20 mb-6 drop-shadow-lg" />
+                    <img src="/images/ciyex-connect-logo.png" alt="Ciyex" className="h-16 mb-6 drop-shadow-lg" />
                     <h1 className="text-4xl font-bold mb-3 text-center tracking-tight">Ciyex Portal</h1>
                     <p className="text-base text-white/80 text-center font-light mb-8">
                         Your Health. Your Control.
@@ -355,7 +355,7 @@ export default function SignInForm() {
             <div className="flex items-center justify-center p-6 sm:p-12 w-full bg-gray-50 dark:bg-gray-900">
                 <div className="w-full max-w-sm">
                     <div className="lg:hidden text-center mb-10">
-                        <img src="/images/logo/logo-icon.svg" alt="Ciyex" className="w-14 h-14 mx-auto mb-3" />
+                        <img src="/images/ciyex-connect-logo.png" alt="Ciyex" className="h-12 mx-auto mb-3" />
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Ciyex Portal</h1>
                     </div>
 
