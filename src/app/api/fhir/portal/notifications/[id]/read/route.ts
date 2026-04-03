@@ -1,0 +1,39 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+const BACKEND_URL = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, message: 'Authorization header missing' },
+        { status: 401 }
+      );
+    }
+
+    const hdrs: Record<string, string> = { 'Authorization': authHeader, 'Content-Type': 'application/json' };
+    const orgAlias = request.headers.get('x-org-alias');
+    if (orgAlias) hdrs['X-Org-Alias'] = orgAlias;
+    const tenantName = request.headers.get('x-tenant-name');
+    if (tenantName) hdrs['X-Tenant-Name'] = tenantName;
+
+    const response = await fetch(`${BACKEND_URL}/api/fhir/portal/notifications/${id}/read`, {
+      method: 'PUT',
+      headers: hdrs,
+    });
+
+    const data = await response.json().catch(() => ({}));
+    return NextResponse.json(data, { status: response.status });
+  } catch (error) {
+    console.error('Mark notification read proxy error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Failed to mark notification as read' },
+      { status: 500 }
+    );
+  }
+}

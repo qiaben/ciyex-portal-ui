@@ -3,7 +3,7 @@ import { fetchWithAuth } from '@/utils/fetchWithAuth';
 
 export type Notification = {
   id: number;
-  type: 'message' | 'appointment' | 'lab' | 'billing' | 'system';
+  type: 'message' | 'appointment' | 'lab' | 'billing' | 'system' | 'document';
   title: string;
   message: string;
   isRead: boolean;
@@ -114,6 +114,33 @@ export function useNotifications() {
         }
       } catch { /* appointments unavailable */ }
 
+      // Load document review notifications (accepted/rejected)
+      try {
+        const notifRes = await fetchWithAuth("/api/fhir/portal/notifications/my");
+        if (notifRes.ok) {
+          const data = await safeJson(notifRes);
+          const notifList = Array.isArray(data.data) ? data.data : (data.data?.content || []);
+          for (const n of notifList) {
+            const nType = (n.type || '').toLowerCase();
+            if (nType === 'document_accepted' || nType === 'document_rejected') {
+              allNotifications.push({
+                id: n.id,
+                type: 'document' as const,
+                title: nType === 'document_accepted'
+                  ? 'Document Accepted'
+                  : 'Document Rejected',
+                message: n.message || n.reason || (nType === 'document_accepted'
+                  ? 'Your document has been accepted by your provider.'
+                  : `Your document was rejected. Reason: ${n.reason || 'No reason provided'}`),
+                isRead: !!n.readAt || n.isRead === true,
+                createdAt: n.createdDate || n.createdAt || new Date().toISOString(),
+                actionUrl: '/documents',
+              });
+            }
+          }
+        }
+      } catch { /* notifications unavailable */ }
+
       // Sort by date (newest first)
       allNotifications.sort((a, b) => {
         const ta = new Date(a.createdAt).getTime();
@@ -132,10 +159,10 @@ export function useNotifications() {
 
   const markAsRead = useCallback(async (id: number) => {
     try {
-      // Mark as read in backend (you'll need to implement this endpoint)
-      // For now, just update locally
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
+      // Persist to backend (best-effort)
+      fetchWithAuth(`/api/fhir/portal/notifications/${id}/read`, { method: 'PUT' }).catch(() => {});
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
     }

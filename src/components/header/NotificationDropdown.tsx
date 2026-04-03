@@ -18,12 +18,14 @@ export default function NotificationDropdown() {
     setIsOpen(false);
   }
 
-  const getNotificationIcon = (type: string) => {
+  const getNotificationIcon = (type: string, title?: string) => {
     switch (type) {
       case 'message': return '💬';
       case 'appointment': return '📅';
       case 'lab': return '🧪';
       case 'billing': return '💳';
+      case 'document':
+        return title?.includes('Rejected') ? '❌' : '✅';
       default: return '🔔';
     }
   };
@@ -106,7 +108,7 @@ export default function NotificationDropdown() {
                     !notification.isRead ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                   }`}
                 >
-                  <span className="text-2xl">{getNotificationIcon(notification.type)}</span>
+                  <span className="text-2xl">{getNotificationIcon(notification.type, notification.title)}</span>
                   <span className="block flex-1">
                     <span className="mb-1.5 block text-theme-sm font-medium text-gray-800 dark:text-white/90">
                       {notification.title}
