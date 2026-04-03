@@ -181,9 +181,35 @@ export function useDocuments() {
     }
   };
 
+  const uploadDocument = async (file: File, category: string, description: string): Promise<boolean> => {
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('category', category);
+      if (description) fd.append('description', description);
+
+      const res = await fetchWithAuth('/api/fhir/portal/documents/upload', {
+        method: 'POST',
+        body: fd,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || `Upload failed (${res.status})`);
+      }
+
+      // Reload documents after successful upload
+      await loadDocuments();
+      return true;
+    } catch (e) {
+      console.error('Upload error:', e);
+      throw e;
+    }
+  };
+
   useEffect(() => {
     loadDocuments();
   }, [loadDocuments]);
 
-  return { documents, loading, error, downloadDocument, viewDocument, deleteDocument, archiveDocument };
+  return { documents, loading, error, downloadDocument, viewDocument, deleteDocument, archiveDocument, uploadDocument };
 }
