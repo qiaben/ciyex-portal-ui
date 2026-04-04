@@ -18,12 +18,15 @@ export async function POST(request: NextRequest) {
     const tenantName = request.headers.get('x-tenant-name') || orgAlias;
     if (tenantName) hdrs['X-Tenant-Name'] = tenantName;
 
-    // Forward the multipart form data as-is to the backend
-    const formData = await request.formData();
+    // Forward the raw multipart body with its original Content-Type (includes boundary)
+    const contentType = request.headers.get('content-type');
+    if (contentType) hdrs['Content-Type'] = contentType;
+
+    const body = await request.arrayBuffer();
     const response = await fetch(`${BACKEND_URL}/api/fhir/portal/documents/upload`, {
       method: 'POST',
       headers: hdrs,
-      body: formData,
+      body: Buffer.from(body),
     });
 
     const data = await response.json().catch(() => ({}));
