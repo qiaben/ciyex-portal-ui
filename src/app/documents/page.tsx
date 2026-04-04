@@ -90,12 +90,8 @@ export default function DocumentsPage() {
         setUploadAlert(null);
         try {
             await uploadDocument(file, category, description);
-            setUploadAlert({ type: "success", message: "Document uploaded successfully." });
             resetForm();
-            setTimeout(() => {
-                setUploadAlert(null);
-                closeModal();
-            }, 1500);
+            closeModal();
         } catch (e: any) {
             setUploadAlert({ type: "error", message: e?.message || "Failed to upload document. Please try again." });
         } finally {
