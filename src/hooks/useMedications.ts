@@ -57,21 +57,32 @@ export function useMedications() {
             ? rawData.content
             : [];
 
-          const mapped = itemList.map((item: any) => ({
-            id: item.id,
-            patientId: item.patientId,
-            encounterId: item.encounterId ?? null,
-            medicationName: safeStr(item.medicationName || item.medication || item.code, "Unknown Medication"),
-            dosage: safeStr(item.dosage),
-            instructions: safeStr(item.instructions),
-            dateIssued: item.dateIssued,
-            prescribingDoctor: safeStr(item.prescribingDoctor || item.prescriberName || item.prescriber),
-            status: safeStr(item.status),
-            audit: {
-              createdDate: mapDate(item.audit?.createdDate),
-              lastModifiedDate: mapDate(item.audit?.lastModifiedDate)
+          const mapped = itemList.map((item: any) => {
+            try {
+              return {
+                id: item.id ?? 0,
+                patientId: item.patientId ?? 0,
+                encounterId: item.encounterId ?? null,
+                medicationName: safeStr(item.medicationName || item.medication || item.code, "Unknown Medication"),
+                dosage: safeStr(item.dosage),
+                instructions: safeStr(item.instructions),
+                dateIssued: safeStr(item.dateIssued),
+                prescribingDoctor: safeStr(item.prescribingDoctor || item.prescriberName || item.prescriber),
+                status: safeStr(item.status),
+                audit: {
+                  createdDate: mapDate(item.audit?.createdDate),
+                  lastModifiedDate: mapDate(item.audit?.lastModifiedDate)
+                }
+              };
+            } catch {
+              return {
+                id: 0, patientId: 0, encounterId: null,
+                medicationName: "Unknown Medication", dosage: "", instructions: "",
+                dateIssued: "", prescribingDoctor: "", status: "unknown",
+                audit: { createdDate: null, lastModifiedDate: null }
+              };
             }
-          }));
+          });
           setMedications(mapped);
         } else {
           setMedications([]);

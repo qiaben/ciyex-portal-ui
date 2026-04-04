@@ -1,12 +1,31 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Component, ErrorInfo } from "react";
 import { useRouter } from "next/navigation";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { safeStr } from "@/utils/safeStr";
 import { useMedications } from "@/hooks/useMedications";
 import { usePortalConfig } from "@/hooks/usePortalConfig";
 import AdminLayout from "@/app/(admin)/layout";
+
+/* ───── Section Error Boundary ───── */
+class SectionErrorBoundary extends Component<
+    { children: React.ReactNode; fallback?: React.ReactNode },
+    { hasError: boolean }
+> {
+    state = { hasError: false };
+    static getDerivedStateFromError() { return { hasError: true }; }
+    componentDidCatch(error: Error, info: ErrorInfo) {
+        console.error("[Dashboard section error]", error, info);
+    }
+    render() {
+        if (this.state.hasError) return this.props.fallback ?? null;
+        return this.props.children;
+    }
+}
+
+/** Safely render any value — returns a string no matter what */
+const safe = (v: unknown, fb = ""): string => safeStr(v, fb);
 
 /* ───── types ───── */
 interface Appointment {
@@ -146,25 +165,26 @@ export default function Dashboard() {
             const dataList = Array.isArray(rawData) ? rawData : (rawData?.content || []);
             if (!dataList.length) return;
             const latest = dataList[0];
-            const dateVal = latest.recordedAt || latest.effectiveDateTime || latest.date || "";
+            if (typeof latest !== "object" || latest === null) return;
+            const dateVal = safe(latest.recordedAt || latest.effectiveDateTime || latest.date);
             const out: VitalReading[] = [];
             const sys = latest.bpSystolic ?? latest.systolicBP ?? latest.systolic ?? latest.systolicBloodPressure;
             const dia = latest.bpDiastolic ?? latest.diastolicBP ?? latest.diastolic ?? latest.diastolicBloodPressure;
             if (sys && dia)
-                out.push({ type: "Blood Pressure", value: `${sys}/${dia}`, unit: "mmHg", date: dateVal });
+                out.push({ type: "Blood Pressure", value: safe(`${safe(sys)}/${safe(dia)}`), unit: "mmHg", date: dateVal });
             const hr = latest.pulse ?? latest.heartRate ?? latest.heart_rate ?? latest.hr;
             if (hr)
-                out.push({ type: "Heart Rate", value: `${hr}`, unit: "bpm", date: dateVal });
+                out.push({ type: "Heart Rate", value: safe(hr), unit: "bpm", date: dateVal });
             const spo2 = latest.oxygenSaturation ?? latest.spo2 ?? latest.spO2 ?? latest.o2Saturation ?? latest.oxygenSat;
             if (spo2)
-                out.push({ type: "SpO2", value: `${spo2}`, unit: "%", date: dateVal });
+                out.push({ type: "SpO2", value: safe(spo2), unit: "%", date: dateVal });
             const weight = latest.weightKg ?? latest.weightLbs ?? latest.weight;
             const weightUnit = latest.weightKg ? "kg" : latest.weightLbs ? "lbs" : "kg";
             if (weight)
-                out.push({ type: "Weight", value: `${weight}`, unit: weightUnit, date: dateVal });
+                out.push({ type: "Weight", value: safe(weight), unit: weightUnit, date: dateVal });
             const bmiVal = latest.bmi ?? latest.BMI;
             if (bmiVal)
-                out.push({ type: "BMI", value: Number(bmiVal).toFixed(1), unit: "", date: dateVal });
+                out.push({ type: "BMI", value: safe(Number(bmiVal).toFixed(1)), unit: "", date: dateVal });
             setVitals(out);
         } catch { /* optional */ }
     };
@@ -174,8 +194,9 @@ export default function Dashboard() {
             const res = await fetchWithAuth("/api/channels");
             if (!res.ok) return;
             const channels = await res.json();
-            const total = (Array.isArray(channels) ? channels : channels.data || [])
-                .reduce((n: number, c: any) => n + (c.unreadCount || 0), 0);
+            const list = Array.isArray(channels) ? channels : (channels?.data || []);
+            if (!Array.isArray(list)) return;
+            const total = list.reduce((n: number, c: any) => n + (Number(c.unreadCount) || 0), 0);
             setUnreadMessages(total);
         } catch { /* optional */ }
     };
@@ -350,6 +371,7 @@ export default function Dashboard() {
 
                         {/* Upcoming Appointments */}
                         {isFeatureEnabled("appointments") && (
+                            <SectionErrorBoundary>
                             <Card
                                 title="Upcoming Appointments"
                                 action={{ label: "View all", onClick: () => router.push("/appointments") }}
@@ -360,19 +382,19 @@ export default function Dashboard() {
                                             <div key={a.id} className="flex items-center gap-4 py-3.5 first:pt-0 last:pb-0">
                                                 <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-blue-50 flex flex-col items-center justify-center">
                                                     <span className="text-[10px] font-bold text-blue-600 uppercase leading-none">
-                                                        {new Date(a.appointmentDate).toLocaleDateString("en-US", { month: "short" })}
+                                                        {safe((() => { try { return new Date(a.appointmentDate).toLocaleDateString("en-US", { month: "short" }); } catch { return "—"; } })())}
                                                     </span>
                                                     <span className="text-base font-bold text-blue-700 leading-tight">
-                                                        {new Date(a.appointmentDate).getDate()}
+                                                        {safe((() => { try { return new Date(a.appointmentDate).getDate(); } catch { return "—"; } })())}
                                                     </span>
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-semibold text-gray-900 truncate">{a.appointmentType}</p>
+                                                    <p className="text-sm font-semibold text-gray-900 truncate">{safe(a.appointmentType)}</p>
                                                     <p className="text-xs text-gray-500">
-                                                        {a.providerName} &middot; {a.appointmentTime ? fmtTime(a.appointmentTime) : ""}
+                                                        {safe(a.providerName)} &middot; {a.appointmentTime ? fmtTime(safe(a.appointmentTime)) : ""}
                                                     </p>
                                                 </div>
-                                                <StatusPill status={a.status} />
+                                                <StatusPill status={safe(a.status, "scheduled")} />
                                             </div>
                                         ))}
                                     </div>
@@ -384,10 +406,12 @@ export default function Dashboard() {
                                     />
                                 )}
                             </Card>
+                            </SectionErrorBoundary>
                         )}
 
                         {/* Current Medications */}
                         {isFeatureEnabled("medications") && (
+                            <SectionErrorBoundary>
                             <Card
                                 title="Current Medications"
                                 action={{ label: "View all", onClick: () => router.push("/medications") }}
@@ -396,9 +420,9 @@ export default function Dashboard() {
                                     <div className="divide-y divide-gray-100">
                                         {medications.slice(0, 4).map((m: any) => (
                                             <div key={m.id} className="py-3 first:pt-0 last:pb-0">
-                                                <p className="text-sm font-semibold text-gray-900">{m.medicationName}</p>
+                                                <p className="text-sm font-semibold text-gray-900">{safe(m.medicationName)}</p>
                                                 <p className="text-xs text-gray-500 mt-0.5">
-                                                    {m.dosage || "–"} &middot; {m.instructions || "No instructions"}
+                                                    {safe(m.dosage, "–")} &middot; {safe(m.instructions, "No instructions")}
                                                 </p>
                                             </div>
                                         ))}
@@ -407,10 +431,12 @@ export default function Dashboard() {
                                     <EmptyState icon={PillIcon} message="No active medications" />
                                 )}
                             </Card>
+                            </SectionErrorBoundary>
                         )}
 
                         {/* Patient Education */}
                         {isFeatureEnabled("education") && (
+                            <SectionErrorBoundary>
                             <Card
                                 title="Patient Education"
                                 action={{ label: "View all", onClick: () => router.push("/education") }}
@@ -423,8 +449,8 @@ export default function Dashboard() {
                                                     <EduIcon />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-semibold text-gray-900 truncate">{t.title}</p>
-                                                    <p className="text-xs text-gray-500">{t.category}{t.assigned ? " \u00b7 Assigned" : ""}</p>
+                                                    <p className="text-sm font-semibold text-gray-900 truncate">{safe(t.title)}</p>
+                                                    <p className="text-xs text-gray-500">{safe(t.category)}{t.assigned ? " \u00b7 Assigned" : ""}</p>
                                                 </div>
                                             </div>
                                         ))}
@@ -437,10 +463,12 @@ export default function Dashboard() {
                                     />
                                 )}
                             </Card>
+                            </SectionErrorBoundary>
                         )}
 
                         {/* Medical Reports & Documents */}
                         {isFeatureEnabled("documents") && (
+                            <SectionErrorBoundary>
                             <Card
                                 title="Medical Reports & Documents"
                                 action={{ label: "View all", onClick: () => router.push("/documents") }}
@@ -453,8 +481,8 @@ export default function Dashboard() {
                                                     <DocIcon />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-semibold text-gray-900 truncate">{d.fileName}</p>
-                                                    <p className="text-xs text-gray-500">{d.category}</p>
+                                                    <p className="text-sm font-semibold text-gray-900 truncate">{safe(d.fileName)}</p>
+                                                    <p className="text-xs text-gray-500">{safe(d.category)}</p>
                                                 </div>
                                             </div>
                                         ))}
@@ -463,6 +491,7 @@ export default function Dashboard() {
                                     <EmptyState icon={DocIcon} message="No documents available" />
                                 )}
                             </Card>
+                            </SectionErrorBoundary>
                         )}
                     </div>
 
@@ -471,6 +500,7 @@ export default function Dashboard() {
 
                         {/* Vitals Snapshot */}
                         {isFeatureEnabled("vitals") && (
+                            <SectionErrorBoundary>
                             <Card
                                 title="Latest Vitals"
                                 action={{ label: "View all", onClick: () => router.push("/vitals") }}
@@ -479,10 +509,10 @@ export default function Dashboard() {
                                     <div className="grid grid-cols-2 gap-3">
                                         {vitals.map((v) => (
                                             <div key={v.type} className="bg-gray-50 rounded-lg p-3">
-                                                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{v.type}</p>
+                                                <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{safe(v.type)}</p>
                                                 <p className="text-lg font-bold text-gray-900 mt-0.5">
-                                                    {v.value}
-                                                    {v.unit && <span className="text-xs font-normal text-gray-500 ml-1">{v.unit}</span>}
+                                                    {safe(v.value)}
+                                                    {v.unit && <span className="text-xs font-normal text-gray-500 ml-1">{safe(v.unit)}</span>}
                                                 </p>
                                             </div>
                                         ))}
@@ -491,6 +521,7 @@ export default function Dashboard() {
                                     <EmptyState icon={HeartIcon} message="No recent vitals" />
                                 )}
                             </Card>
+                            </SectionErrorBoundary>
                         )}
 
                         {/* Quick Links */}
@@ -585,12 +616,12 @@ function Card({ title, action, children }: {
 }
 
 function StatusPill({ status }: { status: string }) {
-    const s = status.toLowerCase();
+    const s = (typeof status === "string" ? status : "").toLowerCase();
     const cls =
         s === "confirmed" || s === "checked_in" ? "bg-green-100 text-green-700" :
         s === "cancelled" || s === "no_show" ? "bg-red-100 text-red-700" :
         "bg-gray-100 text-gray-600";
-    return <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${cls}`}>{status}</span>;
+    return <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${cls}`}>{typeof status === "string" ? status : String(status || "")}</span>;
 }
 
 function EmptyState({ icon: Icon, message, action }: {

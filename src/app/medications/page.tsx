@@ -5,22 +5,25 @@ import { useMedications } from "@/hooks/useMedications";
 import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/tables/Pagination";
 import { Pill, AlertCircle } from "lucide-react";
+import { safeStr } from "@/utils/safeStr";
 
-function statusBadge(status?: string) {
-    const s = (status || "").toLowerCase();
+function statusBadge(status?: unknown) {
+    const str = safeStr(status, "Unknown");
+    const s = str.toLowerCase();
     const cls =
         s === "active" ? "bg-green-100 text-green-700" :
         s === "discontinued" ? "bg-red-100 text-red-700" :
         s === "completed" ? "bg-blue-100 text-blue-700" :
         "bg-gray-100 text-gray-600";
-    return <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{status || "Unknown"}</span>;
+    return <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{str}</span>;
 }
 
-function fmtDate(d: string) {
+function fmtDate(d: unknown) {
     try {
-        const dt = new Date(d);
-        return isNaN(dt.getTime()) ? d : dt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-    } catch { return d || "—"; }
+        const str = safeStr(d, "—");
+        const dt = new Date(str);
+        return isNaN(dt.getTime()) ? str : dt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+    } catch { return "—"; }
 }
 
 export default function MedicationsPage() {
@@ -71,12 +74,12 @@ export default function MedicationsPage() {
                                     {paginatedItems.map((m: any, i: number) => (
                                         <tr key={m.id || i} className="hover:bg-gray-50/50 transition-colors">
                                             <td className="px-4 py-3">
-                                                <span className="text-sm font-medium text-gray-900">{m.medicationName}</span>
+                                                <span className="text-sm font-medium text-gray-900">{safeStr(m.medicationName)}</span>
                                             </td>
-                                            <td className="px-4 py-3 text-sm text-gray-700">{m.dosage || "—"}</td>
-                                            <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate">{m.instructions || "—"}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-700">{safeStr(m.dosage, "—")}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-700 max-w-xs truncate">{safeStr(m.instructions, "—")}</td>
                                             <td className="px-4 py-3 text-sm text-gray-700">{fmtDate(m.dateIssued)}</td>
-                                            <td className="px-4 py-3 text-sm text-gray-700">{m.prescribingDoctor || "—"}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-700">{safeStr(m.prescribingDoctor, "—")}</td>
                                             <td className="px-4 py-3">{statusBadge(m.status)}</td>
                                         </tr>
                                     ))}
