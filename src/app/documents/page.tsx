@@ -5,8 +5,6 @@ import AdminLayout from "@/app/(admin)/layout";
 import { useDocuments } from "@/hooks/useDocuments";
 import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/tables/Pagination";
-import { Modal } from "@/components/ui/modal";
-import { useModal } from "@/hooks/useModal";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { FileText, FolderOpen, Lock, AlertCircle, Download, Eye, Upload, X, CloudUpload } from "lucide-react";
 
@@ -29,13 +27,17 @@ function categoryBadge(cat?: string) {
     return <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{cat || "Other"}</span>;
 }
 
-const DEFAULT_CATEGORIES = ["Clinical", "Lab", "Imaging", "Insurance", "Other"];
+const DEFAULT_CATEGORIES = [
+    "Clinical Note", "Discharge Summary", "Lab Report", "Imaging Report",
+    "Consent Form", "Referral Letter", "Insurance Document",
+    "Identification", "Prescription", "Other"
+];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export default function DocumentsPage() {
     const { documents, loading, error, downloadDocument, viewDocument, uploadDocument } = useDocuments();
     const { currentPage, totalPages, paginatedItems, onPageChange, totalItems, startItem, endItem } = usePagination(documents, 10);
-    const { isOpen, openModal, closeModal } = useModal();
+    const [showModal, setShowModal] = useState(false);
     const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
 
     useEffect(() => {
@@ -64,7 +66,7 @@ export default function DocumentsPage() {
 
     const handleClose = () => {
         resetForm();
-        closeModal();
+        setShowModal(false);
     };
 
     const handleFileSelect = (selected: File | null) => {
@@ -91,7 +93,7 @@ export default function DocumentsPage() {
         try {
             await uploadDocument(file, category, description);
             resetForm();
-            closeModal();
+            setShowModal(false);
         } catch (e: any) {
             setUploadAlert({ type: "error", message: e?.message || "Failed to upload document. Please try again." });
         } finally {
@@ -108,7 +110,7 @@ export default function DocumentsPage() {
                         <p className="text-sm text-gray-500 mt-0.5">Access your medical records, test results, and documents</p>
                     </div>
                     <button
-                        onClick={openModal}
+                        onClick={() => setShowModal(true)}
                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                     >
                         <Upload className="h-4 w-4" />
@@ -134,7 +136,7 @@ export default function DocumentsPage() {
                         <h3 className="text-sm font-semibold text-gray-900">No documents yet</h3>
                         <p className="text-sm text-gray-500 mt-1">Upload your medical documents for your provider to review.</p>
                         <button
-                            onClick={openModal}
+                            onClick={() => setShowModal(true)}
                             className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                         >
                             <Upload className="h-4 w-4" />
@@ -242,120 +244,124 @@ export default function DocumentsPage() {
             </div>
 
             {/* Upload Document Modal */}
-            <Modal isOpen={isOpen} onClose={handleClose} className="max-w-[420px] p-5">
-                <div className="space-y-4">
-                    <h3 className="text-base font-semibold text-gray-900">Upload Document</h3>
-
-                    {uploadAlert && (
-                        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${
-                            uploadAlert.type === "success"
-                                ? "bg-green-50 text-green-700 border border-green-200"
-                                : "bg-red-50 text-red-700 border border-red-200"
-                        }`}>
-                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                            {uploadAlert.message}
-                        </div>
-                    )}
-
-                    {/* Drop Zone */}
-                    <div
-                        onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-                        onDragLeave={() => setDragActive(false)}
-                        onDrop={handleDrop}
-                        onClick={() => fileInputRef.current?.click()}
-                        className={`relative cursor-pointer rounded-lg border-2 border-dashed p-5 text-center transition-colors ${
-                            dragActive
-                                ? "border-blue-400 bg-blue-50"
-                                : file
-                                    ? "border-green-300 bg-green-50"
-                                    : "border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100"
-                        }`}
-                    >
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            className="hidden"
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.tiff,.bmp,.txt,.csv,.xml,.hl7"
-                            onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
-                        />
-                        {file ? (
-                            <div className="flex items-center justify-center gap-2">
-                                <FileText className="h-6 w-6 text-green-500" />
-                                <div className="text-left">
-                                    <p className="text-sm font-medium text-gray-900 truncate max-w-[220px]">{file.name}</p>
-                                    <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); setFile(null); }}
-                                    className="ml-1 p-1 text-gray-400 hover:text-red-500 transition-colors"
-                                >
-                                    <X className="h-4 w-4" />
-                                </button>
-                            </div>
-                        ) : (
-                            <>
-                                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                                <p className="text-sm font-medium text-gray-700">
-                                    {dragActive ? "Drop file here" : "Drag & drop or click to browse"}
-                                </p>
-                                <p className="text-xs text-gray-400 mt-1">PDF, DOC, JPG, PNG, TIFF up to 10 MB</p>
-                            </>
-                        )}
-                    </div>
-
-                    {/* Category + Description */}
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
-                        <select
-                            value={category}
-                            onChange={(e) => setCategory(e.target.value)}
-                            className="w-full h-9 rounded-lg border border-gray-300 bg-white px-2.5 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                        >
-                            {categories.map((c) => (
-                                <option key={c} value={c}>{c}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Description <span className="text-gray-400 font-normal">(optional)</span></label>
-                        <textarea
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Brief description of the document"
-                            rows={2}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-sm text-gray-700 placeholder:text-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none"
-                        />
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center justify-end gap-2 pt-1">
-                        <button
-                            onClick={handleClose}
-                            className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                        >
-                            Cancel
+            {showModal && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={handleClose} className="absolute right-4 top-4 text-gray-400 hover:text-gray-600">
+                            <X className="h-5 w-5" />
                         </button>
-                        <button
-                            onClick={handleUpload}
-                            disabled={!file || uploading}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+
+                        <h3 className="text-lg font-semibold text-gray-900">Upload Document</h3>
+                        <p className="text-sm text-gray-500 mt-0.5">Upload a medical document for your provider to review</p>
+
+                        {uploadAlert && (
+                            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium mt-4 ${
+                                uploadAlert.type === "success"
+                                    ? "bg-green-50 text-green-700 border border-green-200"
+                                    : "bg-red-50 text-red-700 border border-red-200"
+                            }`}>
+                                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                                {uploadAlert.message}
+                            </div>
+                        )}
+
+                        {/* Drop Zone */}
+                        <div
+                            onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                            onDragLeave={() => setDragActive(false)}
+                            onDrop={handleDrop}
+                            onClick={() => fileInputRef.current?.click()}
+                            className={`mt-5 relative cursor-pointer rounded-lg border-2 border-dashed p-5 text-center transition-colors ${
+                                dragActive
+                                    ? "border-blue-400 bg-blue-50"
+                                    : file
+                                        ? "border-green-300 bg-green-50"
+                                        : "border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100"
+                            }`}
                         >
-                            {uploading ? (
-                                <>
-                                    <div className="animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
-                                    Uploading...
-                                </>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                className="hidden"
+                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.tiff,.bmp,.txt,.csv,.xml,.hl7"
+                                onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
+                            />
+                            {file ? (
+                                <div className="flex items-center justify-center gap-2">
+                                    <FileText className="h-6 w-6 text-green-500" />
+                                    <div className="text-left">
+                                        <p className="text-sm font-medium text-gray-900 truncate max-w-[220px]">{file.name}</p>
+                                        <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); setFile(null); }}
+                                        className="ml-1 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </div>
                             ) : (
                                 <>
-                                    <Upload className="h-3.5 w-3.5" />
-                                    Upload
+                                    <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                                    <p className="text-sm font-medium text-gray-700">
+                                        {dragActive ? "Drop file here" : "Drag & drop or click to browse"}
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-1">PDF, DOC, JPG, PNG, TIFF up to 10 MB</p>
                                 </>
                             )}
-                        </button>
+                        </div>
+
+                        {/* Category */}
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Category</label>
+                            <select
+                                value={category}
+                                onChange={(e) => setCategory(e.target.value)}
+                                className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                            >
+                                {categories.map((c) => (
+                                    <option key={c} value={c}>{c}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Description */}
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Description <span className="text-gray-400 font-normal">(optional)</span></label>
+                            <textarea
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                placeholder="Brief description of the document"
+                                rows={2}
+                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 placeholder:text-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none"
+                            />
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-gray-100">
+                            <button
+                                onClick={handleClose}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleUpload}
+                                disabled={!file || uploading}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {uploading ? (
+                                    <>
+                                        <div className="animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
+                                        Uploading...
+                                    </>
+                                ) : "Upload"}
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </Modal>
+            )}
         </AdminLayout>
     );
 }
