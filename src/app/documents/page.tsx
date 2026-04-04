@@ -7,7 +7,7 @@ import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/tables/Pagination";
 import { Modal } from "@/components/ui/modal";
 import { useModal } from "@/hooks/useModal";
-import { FileText, FolderOpen, Lock, AlertCircle, Download, Eye, Trash2, Upload, X } from "lucide-react";
+import { FileText, FolderOpen, Lock, AlertCircle, Download, Eye, Trash2, Upload, X, CloudUpload } from "lucide-react";
 
 function fmtDate(d?: string) {
     if (!d) return "—";
@@ -122,20 +122,34 @@ export default function DocumentsPage() {
                         </div>
                     </div>
                 ) : documents.length === 0 ? (
-                    <div className="text-center py-16">
+                    <div className="text-center py-16 bg-white rounded-xl border border-gray-200 shadow-sm">
                         <FileText className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                        <h3 className="text-sm font-semibold text-gray-900">No documents found</h3>
-                        <p className="text-sm text-gray-500 mt-1">Your medical documents will appear here once uploaded by your provider.</p>
+                        <h3 className="text-sm font-semibold text-gray-900">No documents yet</h3>
+                        <p className="text-sm text-gray-500 mt-1">Upload your medical documents for your provider to review.</p>
+                        <button
+                            onClick={openModal}
+                            className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                        >
+                            <Upload className="h-4 w-4" />
+                            Upload Your First Document
+                        </button>
                     </div>
                 ) : (
                     <>
                         {/* Summary */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
                                 <div className="p-2 bg-blue-50 rounded-lg"><FileText className="h-5 w-5 text-blue-600" /></div>
                                 <div>
                                     <p className="text-xs text-gray-500">Total Documents</p>
                                     <p className="text-lg font-bold text-gray-900">{documents.length}</p>
+                                </div>
+                            </div>
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
+                                <div className="p-2 bg-indigo-50 rounded-lg"><CloudUpload className="h-5 w-5 text-indigo-600" /></div>
+                                <div>
+                                    <p className="text-xs text-gray-500">My Uploads</p>
+                                    <p className="text-lg font-bold text-gray-900">{documents.filter((d: any) => d.type === 'patient-upload').length}</p>
                                 </div>
                             </div>
                             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center gap-3">
@@ -163,7 +177,7 @@ export default function DocumentsPage() {
                                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Document</th>
                                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</th>
                                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Security</th>
+                                            <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Source</th>
                                             <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
@@ -179,12 +193,14 @@ export default function DocumentsPage() {
                                                     <span className="text-sm text-gray-700">{fmtDate(doc.createdDate)}</span>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    {doc.encrypted ? (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                                                            <Lock className="h-3 w-3" /> Encrypted
+                                                    {doc.type === 'patient-upload' ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                                                            <CloudUpload className="h-3 w-3" /> My Upload
                                                         </span>
                                                     ) : (
-                                                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Standard</span>
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                            Provider
+                                                        </span>
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-3">
