@@ -93,7 +93,9 @@ export function useDocuments() {
 
     for (const id of ids) {
       try {
-        const res = await fetchWithAuth(`/api/fhir/portal/documents/${id}/download`);
+        const res = await fetchWithAuth(`/api/fhir/portal/documents/${id}/download`, {
+          headers: { "Accept": "*/*" },
+        });
         if (res.ok) {
           const blob = await res.blob();
           const url = window.URL.createObjectURL(blob);
@@ -122,7 +124,9 @@ export function useDocuments() {
 
     for (const id of ids) {
       try {
-        const res = await fetchWithAuth(`/api/fhir/portal/documents/${id}/download`);
+        const res = await fetchWithAuth(`/api/fhir/portal/documents/${id}/download`, {
+          headers: { "Accept": "*/*" },
+        });
         if (res.ok) {
           const blob = await res.blob();
           const url = window.URL.createObjectURL(blob);
