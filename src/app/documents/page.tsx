@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import AdminLayout from "@/app/(admin)/layout";
 import { useDocuments } from "@/hooks/useDocuments";
 import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/tables/Pagination";
 import { Modal } from "@/components/ui/modal";
 import { useModal } from "@/hooks/useModal";
-import { FileText, FolderOpen, Lock, AlertCircle, Download, Eye, Trash2, Upload, X, CloudUpload } from "lucide-react";
+import { fetchWithAuth } from "@/utils/fetchWithAuth";
+import { FileText, FolderOpen, Lock, AlertCircle, Download, Eye, Upload, X, CloudUpload } from "lucide-react";
 
 function fmtDate(d?: string) {
     if (!d) return "—";
@@ -28,13 +29,23 @@ function categoryBadge(cat?: string) {
     return <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{cat || "Other"}</span>;
 }
 
-const CATEGORIES = ["Clinical", "Lab", "Imaging", "Insurance", "Other"];
+const DEFAULT_CATEGORIES = ["Clinical", "Lab", "Imaging", "Insurance", "Other"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export default function DocumentsPage() {
-    const { documents, loading, error, downloadDocument, viewDocument, deleteDocument, uploadDocument } = useDocuments();
+    const { documents, loading, error, downloadDocument, viewDocument, uploadDocument } = useDocuments();
     const { currentPage, totalPages, paginatedItems, onPageChange, totalItems, startItem, endItem } = usePagination(documents, 10);
     const { isOpen, openModal, closeModal } = useModal();
+    const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+
+    useEffect(() => {
+        fetchWithAuth("/api/fhir/portal/documents/categories")
+            .then((r) => r.json())
+            .then((d) => {
+                if (d.success !== false && Array.isArray(d.data) && d.data.length > 0) setCategories(d.data);
+            })
+            .catch(() => {});
+    }, []);
 
     const [file, setFile] = useState<File | null>(null);
     const [category, setCategory] = useState("Clinical");
@@ -213,10 +224,6 @@ export default function DocumentsPage() {
                                                             onClick={() => downloadDocument(doc.id)}
                                                             className="p-1 text-green-600 hover:text-green-800 transition-colors" title="Download"
                                                         ><Download className="h-4 w-4" /></button>
-                                                        <button
-                                                            onClick={async () => { if (window.confirm("Delete this document?")) await deleteDocument(doc.id); }}
-                                                            className="p-1 text-red-500 hover:text-red-700 transition-colors" title="Delete"
-                                                        ><Trash2 className="h-4 w-4" /></button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -239,21 +246,17 @@ export default function DocumentsPage() {
             </div>
 
             {/* Upload Document Modal */}
-            <Modal isOpen={isOpen} onClose={handleClose} className="max-w-[520px] p-6 lg:p-8">
-                <div className="space-y-5">
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-900">Upload Document</h3>
-                        <p className="text-sm text-gray-500 mt-1">Upload a medical document to your records</p>
-                    </div>
+            <Modal isOpen={isOpen} onClose={handleClose} className="max-w-[420px] p-5">
+                <div className="space-y-4">
+                    <h3 className="text-base font-semibold text-gray-900">Upload Document</h3>
 
-                    {/* Alert */}
                     {uploadAlert && (
-                        <div className={`flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium ${
+                        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${
                             uploadAlert.type === "success"
                                 ? "bg-green-50 text-green-700 border border-green-200"
                                 : "bg-red-50 text-red-700 border border-red-200"
                         }`}>
-                            <AlertCircle className="h-4 w-4 shrink-0" />
+                            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                             {uploadAlert.message}
                         </div>
                     )}
@@ -264,7 +267,7 @@ export default function DocumentsPage() {
                         onDragLeave={() => setDragActive(false)}
                         onDrop={handleDrop}
                         onClick={() => fileInputRef.current?.click()}
-                        className={`relative cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
+                        className={`relative cursor-pointer rounded-lg border-2 border-dashed p-5 text-center transition-colors ${
                             dragActive
                                 ? "border-blue-400 bg-blue-50"
                                 : file
@@ -280,79 +283,76 @@ export default function DocumentsPage() {
                             onChange={(e) => handleFileSelect(e.target.files?.[0] || null)}
                         />
                         {file ? (
-                            <div className="flex items-center justify-center gap-3">
-                                <FileText className="h-8 w-8 text-green-500" />
+                            <div className="flex items-center justify-center gap-2">
+                                <FileText className="h-6 w-6 text-green-500" />
                                 <div className="text-left">
-                                    <p className="text-sm font-medium text-gray-900 truncate max-w-[280px]">{file.name}</p>
+                                    <p className="text-sm font-medium text-gray-900 truncate max-w-[220px]">{file.name}</p>
                                     <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={(e) => { e.stopPropagation(); setFile(null); }}
-                                    className="ml-2 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                                    className="ml-1 p-1 text-gray-400 hover:text-red-500 transition-colors"
                                 >
                                     <X className="h-4 w-4" />
                                 </button>
                             </div>
                         ) : (
                             <>
-                                <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+                                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                                 <p className="text-sm font-medium text-gray-700">
-                                    {dragActive ? "Drop file here" : "Drag & drop a file here"}
+                                    {dragActive ? "Drop file here" : "Drag & drop or click to browse"}
                                 </p>
-                                <p className="text-xs text-gray-500 mt-1">or click to browse</p>
-                                <p className="text-xs text-gray-400 mt-2">PDF, DOC, JPG, PNG, TIFF up to 10 MB</p>
+                                <p className="text-xs text-gray-400 mt-1">PDF, DOC, JPG, PNG, TIFF up to 10 MB</p>
                             </>
                         )}
                     </div>
 
-                    {/* Category */}
+                    {/* Category + Description */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Category</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
                         <select
                             value={category}
                             onChange={(e) => setCategory(e.target.value)}
-                            className="w-full h-11 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-700 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-colors"
+                            className="w-full h-9 rounded-lg border border-gray-300 bg-white px-2.5 text-sm text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
                         >
-                            {CATEGORIES.map((c) => (
+                            {categories.map((c) => (
                                 <option key={c} value={c}>{c}</option>
                             ))}
                         </select>
                     </div>
-
-                    {/* Description */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Description <span className="text-gray-400 font-normal">(optional)</span></label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Description <span className="text-gray-400 font-normal">(optional)</span></label>
                         <textarea
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            placeholder="e.g. Lab results from Dr. Smith visit on March 2026"
-                            rows={3}
-                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-colors resize-none"
+                            placeholder="Brief description of the document"
+                            rows={2}
+                            className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-sm text-gray-700 placeholder:text-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none"
                         />
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center justify-end gap-3 pt-2">
+                    <div className="flex items-center justify-end gap-2 pt-1">
                         <button
                             onClick={handleClose}
-                            className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            className="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleUpload}
                             disabled={!file || uploading}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {uploading ? (
                                 <>
-                                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                                    <div className="animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
                                     Uploading...
                                 </>
                             ) : (
                                 <>
-                                    <Upload className="h-4 w-4" />
+                                    <Upload className="h-3.5 w-3.5" />
                                     Upload
                                 </>
                             )}
