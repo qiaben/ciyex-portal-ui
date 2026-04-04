@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     const hdrs: Record<string, string> = { 'Authorization': authHeader };
     const orgAlias = request.headers.get('x-org-alias');
     if (orgAlias) hdrs['X-Org-Alias'] = orgAlias;
-    const tenantName = request.headers.get('x-tenant-name');
+    const tenantName = request.headers.get('x-tenant-name') || orgAlias;
     if (tenantName) hdrs['X-Tenant-Name'] = tenantName;
 
     // Forward the multipart form data as-is to the backend
