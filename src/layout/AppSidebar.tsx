@@ -4,11 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
 import { usePortalConfig, usePortalForms } from "@/hooks/usePortalConfig";
-import { icons, Settings, Circle } from "lucide-react";
+import { icons, Settings, Circle, ChevronDown, ClipboardList } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-// Resolve a Lucide icon component by name from config.
-// Falls back to Circle if the name doesn't match any known icon.
 function resolveIcon(name: string): LucideIcon {
   return (icons as Record<string, LucideIcon>)[name] ?? Circle;
 }
@@ -17,45 +15,42 @@ const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
   const [isHydrated, setIsHydrated] = useState(false);
+  const [formsOpen, setFormsOpen] = useState(false);
   const isActive = useCallback(
-    (path: string) => path === pathname || (path.startsWith("/forms/") && !!pathname?.startsWith(path)),
+    (path: string) => path === pathname,
     [pathname],
   );
 
   const { config, loading: configLoading, isFeatureEnabled } = usePortalConfig();
   const { forms } = usePortalForms("custom");
 
+  const isExpView = isExpanded || isHovered || isMobileOpen;
+
+  // Auto-expand Forms menu when on a form page
+  const isOnFormPage = !!pathname?.startsWith("/forms");
+  useEffect(() => {
+    if (isOnFormPage && forms.length > 0) setFormsOpen(true);
+  }, [isOnFormPage, forms.length]);
+
   useEffect(() => {
     setIsHydrated(true);
   }, []);
 
-  // Build nav items from config, replacing the generic "forms" entry with
-  // individual nav items for each active custom form
   const navItems = React.useMemo(() => {
     const configNav = config?.navigation;
     if (!configNav || configNav.length === 0) return [];
 
-    const baseItems = configNav
+    return configNav
       .filter((n) => n.visible)
       .sort((a, b) => a.position - b.position)
       .filter((n) => isFeatureEnabled(n.key))
-      // Remove generic "forms" entry — individual forms replace it
       .filter((n) => n.key !== "forms")
       .map((n) => ({
         name: n.label,
         icon: resolveIcon(n.icon),
         path: n.path || `/${n.key}`,
       }));
-
-    // Inject each active custom form as its own sidebar item
-    const formItems = forms.map((f) => ({
-      name: f.title,
-      icon: resolveIcon("ClipboardList"),
-      path: `/forms/${f.formKey}`,
-    }));
-
-    return [...baseItems, ...formItems];
-  }, [config?.navigation, isFeatureEnabled, forms]);
+  }, [config?.navigation, isFeatureEnabled]);
 
   if (!isHydrated) {
     return (
@@ -70,7 +65,7 @@ const AppSidebar: React.FC = () => {
   return (
     <aside
       className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200
-        ${isExpanded || isMobileOpen ? "w-[280px]" : isHovered ? "w-[280px]" : "w-[90px]"}
+        ${isExpView ? "w-[280px]" : "w-[90px]"}
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0`}
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
@@ -78,18 +73,10 @@ const AppSidebar: React.FC = () => {
     >
       {/* Logo */}
       <div className="py-8 flex justify-center">
-        {isExpanded || isHovered || isMobileOpen ? (
-          <img
-            src="/images/ciyex-connect-logo.png"
-            alt="Ciyex Connect"
-            className="h-16 w-auto"
-          />
+        {isExpView ? (
+          <img src="/images/ciyex-connect-logo.png" alt="Ciyex Connect" className="h-16 w-auto" />
         ) : (
-          <img
-            src="/images/ciyex-connect.png"
-            alt="Ciyex Connect"
-            className="h-12 w-12"
-          />
+          <img src="/images/ciyex-connect.png" alt="Ciyex Connect" className="h-12 w-12" />
         )}
       </div>
 
@@ -114,13 +101,58 @@ const AppSidebar: React.FC = () => {
                     <span className={`${isActive(nav.path) ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>
                       <Icon className="w-5 h-5" />
                     </span>
-                    {(isExpanded || isHovered || isMobileOpen) && (
-                      <span className="menu-item-text">{nav.name}</span>
-                    )}
+                    {isExpView && <span className="menu-item-text">{nav.name}</span>}
                   </Link>
                 </li>
               );
             })}
+
+            {/* Forms collapsible menu */}
+            {forms.length > 0 && (
+              <li>
+                <button
+                  onClick={() => setFormsOpen((o) => !o)}
+                  className={`menu-item group w-full ${isOnFormPage ? "menu-item-active" : "menu-item-inactive"}`}
+                >
+                  <span className={`${isOnFormPage ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>
+                    <ClipboardList className="w-5 h-5" />
+                  </span>
+                  {isExpView && (
+                    <>
+                      <span className="menu-item-text flex-1 text-left">Forms</span>
+                      <ChevronDown
+                        className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${formsOpen ? "rotate-180" : ""}`}
+                      />
+                    </>
+                  )}
+                </button>
+
+                {/* Sub-items */}
+                {formsOpen && isExpView && (
+                  <ul className="mt-1 ml-6 flex flex-col gap-1 border-l border-gray-200 dark:border-gray-700 pl-3">
+                    {forms.map((f) => {
+                      const formPath = `/forms/${f.formKey}`;
+                      const active = pathname === formPath || pathname?.startsWith(formPath + "/");
+                      return (
+                        <li key={f.formKey}>
+                          <Link
+                            href={formPath}
+                            className={`flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+                              active
+                                ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 font-medium"
+                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? "bg-blue-600" : "bg-gray-300 dark:bg-gray-600"}`} />
+                            <span className="truncate">{f.title}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </li>
+            )}
           </ul>
         )}
       </div>
@@ -134,9 +166,7 @@ const AppSidebar: React.FC = () => {
           <span className={`${isActive("/settings") ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>
             <Settings className="w-5 h-5" />
           </span>
-          {(isExpanded || isHovered || isMobileOpen) && (
-            <span className="menu-item-text">Settings</span>
-          )}
+          {isExpView && <span className="menu-item-text">Settings</span>}
         </Link>
       </div>
     </aside>
