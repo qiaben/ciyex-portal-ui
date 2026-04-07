@@ -105,13 +105,15 @@ export function usePortalForms(formType?: string) {
     useEffect(() => {
         (async () => {
             try {
-                const url = formType
-                    ? `/api/portal/config/forms/active?type=${formType}`
-                    : "/api/portal/config/forms/active";
+                const params = new URLSearchParams();
+                if (formType) params.set("formType", formType);
+                const url = `/api/portal/config/forms${params.toString() ? `?${params}` : ""}`;
                 const res = await fetchWithAuth(url);
                 if (res.ok) {
-                    const data = await res.json();
-                    setForms(Array.isArray(data) ? data : []);
+                    const json = await res.json();
+                    // Backend wraps in { success, data, message }
+                    const list = Array.isArray(json) ? json : Array.isArray(json.data) ? json.data : [];
+                    setForms(list.filter((f: PortalFormDef) => f.active));
                 }
             } catch (err) {
                 console.error("Failed to load portal forms:", err);
