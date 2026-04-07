@@ -33,8 +33,8 @@ export class MediasoupStompProvider implements VideoCallProvider {
     private onStateChange: ((s: Partial<VideoCallState>) => void) | null = null;
     private sessionId: string = "";
     private userId: string = "";
-    private joinTimeout: ReturnType<typeof setTimeout> | null = null;
     private remotePeersSnapshot: Map<string, { displayName: string }> = new Map();
+    private joinTimeout: ReturnType<typeof setTimeout> | null = null;
     private pendingProduceCallbacks: Map<string, (result: { id: string }) => void> = new Map();
 
     async connect(
@@ -82,6 +82,7 @@ export class MediasoupStompProvider implements VideoCallProvider {
             // This timeout is NOT cleared on STOMP connect — only when "joined" is received in setupMediasoup.
             this.joinTimeout = setTimeout(() => {
                 console.error("[telehealth] Timed out waiting for 'joined' from signaling server");
+                // Stop STOMP reconnection attempts
                 this.stompClient?.deactivate().catch(() => {});
                 this.onStateChange?.({ error: "Could not connect to session — the telehealth server may be unavailable or the session has ended. Please try again.", callStatus: "error" });
                 resolve();
@@ -95,7 +96,7 @@ export class MediasoupStompProvider implements VideoCallProvider {
                 reconnectDelay: 5000,
                 heartbeatIncoming: 10000,
                 heartbeatOutgoing: 10000,
-                debug: () => {},
+                debug: () => {}, // Suppress noisy STOMP debug logs
             });
 
             stompClient.onConnect = () => {
@@ -131,6 +132,8 @@ export class MediasoupStompProvider implements VideoCallProvider {
                 stompClient.subscribe(`/topic/session/${sid}/state`, (msg) => {
                     const p = JSON.parse(msg.body);
                     if (p.type === "producer-toggled" && p.peerId !== uid) {
+                        // Remote peer muted/unmuted — consumers auto-handle at RTP level,
+                        // but we can surface the state change for UI indicators if needed
                         console.log(`[telehealth] Remote peer ${p.peerId} ${p.paused ? "muted" : "unmuted"} ${p.kind}`);
                     }
                 });
@@ -157,6 +160,7 @@ export class MediasoupStompProvider implements VideoCallProvider {
             };
 
             stompClient.onWebSocketClose = () => {
+                // If WebSocket closes before "joined" is received, stop reconnecting and fire error
                 if (this.joinTimeout) {
                     clearTimeout(this.joinTimeout);
                     this.joinTimeout = null;
@@ -237,6 +241,16 @@ export class MediasoupStompProvider implements VideoCallProvider {
                 });
             });
 
+            sendTransport.on("connectionstatechange", (state: string) => {
+                console.log(`[telehealth] sendTransport state: ${state}`);
+                if (state === "failed") {
+                    console.error("[telehealth] Send transport ICE failed — media cannot be sent");
+                    this.onStateChange?.({ error: "Your network cannot send media. Please check your firewall/VPN and rejoin." });
+                } else if (state === "disconnected") {
+                    console.warn("[telehealth] Send transport disconnected — waiting for ICE restart...");
+                }
+            });
+
             this.sendTransport = sendTransport;
 
             // --- Recv transport ---
@@ -255,6 +269,16 @@ export class MediasoupStompProvider implements VideoCallProvider {
                     body: JSON.stringify({ userId: uid, transportId: recvTransport.id, dtlsParameters }),
                 });
                 cb();
+            });
+
+            recvTransport.on("connectionstatechange", (state: string) => {
+                console.log(`[telehealth] recvTransport state: ${state}`);
+                if (state === "failed") {
+                    console.error("[telehealth] Recv transport ICE failed — cannot receive remote media");
+                    this.onStateChange?.({ error: "Cannot receive remote audio/video. Please check your network and rejoin." });
+                } else if (state === "disconnected") {
+                    console.warn("[telehealth] Recv transport disconnected — waiting for ICE restart...");
+                }
             });
 
             this.recvTransport = recvTransport;
@@ -311,7 +335,7 @@ export class MediasoupStompProvider implements VideoCallProvider {
             this.consumers.set(consumer.id, consumer);
             this.stompClient?.publish({
                 destination: `/app/session/${this.sessionId}/consumer-resume`,
-                body: JSON.stringify({ consumerId: consumer.id }),
+                body: JSON.stringify({ consumerId: consumer.id, userId: this.userId }),
             });
             if (this.remoteVideoEl) {
                 const existing = this.remoteVideoEl.srcObject as MediaStream | null;
