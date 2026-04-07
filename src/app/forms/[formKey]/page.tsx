@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AdminLayout from "@/app/(admin)/layout";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
@@ -10,6 +10,37 @@ import {
     Send, Loader2, CheckCircle2, Clock, XCircle,
     ClipboardList, FileText,
 } from "lucide-react";
+
+// Script injected into HTML template iframes to capture form submissions
+const IFRAME_CAPTURE_SCRIPT = `
+<script>
+(function() {
+  document.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var form = e.target;
+    var data = {};
+    var elements = form.elements;
+    for (var i = 0; i < elements.length; i++) {
+      var el = elements[i];
+      if (!el.name) continue;
+      if (el.type === 'checkbox') {
+        data[el.name] = el.checked;
+      } else if (el.type === 'radio') {
+        if (el.checked) data[el.name] = el.value;
+      } else if (el.tagName === 'SELECT' && el.multiple) {
+        var vals = [];
+        for (var j = 0; j < el.options.length; j++) {
+          if (el.options[j].selected) vals.push(el.options[j].value);
+        }
+        data[el.name] = vals;
+      } else {
+        data[el.name] = el.value;
+      }
+    }
+    window.parent.postMessage({ type: 'FORM_SUBMIT', data: data }, '*');
+  }, true);
+})();
+</script>`;
 
 export default function FormFillPage() {
     const params = useParams();
@@ -25,12 +56,99 @@ export default function FormFillPage() {
     const [submitted, setSubmitted] = useState(false);
     const [activeTab, setActiveTab] = useState<"fill" | "submissions">("fill");
 
+    // HTML template form state
+    const [templateHtml, setTemplateHtml] = useState<string | null>(null);
+    const [templateLoading, setTemplateLoading] = useState(false);
+    const [templateError, setTemplateError] = useState<string | null>(null);
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+
     useEffect(() => {
         if (!formsLoading && forms.length > 0) {
             const found = forms.find((f) => f.formKey === formKey);
             setForm(found || null);
         }
     }, [forms, formsLoading, formKey]);
+
+    // Determine if the form is an HTML template form
+    const parsedFieldConfig = form
+        ? typeof form.fieldConfig === "string"
+            ? (() => { try { return JSON.parse(form.fieldConfig); } catch { return form.fieldConfig; } })()
+            : form.fieldConfig
+        : null;
+    const isHtmlTemplate = parsedFieldConfig?.htmlTemplate === true;
+    const templateDocId = parsedFieldConfig?.templateDocId;
+
+    // Fetch HTML template when applicable
+    useEffect(() => {
+        if (!isHtmlTemplate || !templateDocId) return;
+        let cancelled = false;
+        setTemplateLoading(true);
+        setTemplateError(null);
+
+        fetchWithAuth(`/api/template-documents/${templateDocId}/render`)
+            .then(async (res) => {
+                if (cancelled) return;
+                if (!res.ok) throw new Error(`Failed to load template (${res.status})`);
+                const html = await res.text();
+                // Inject the capture script before </body> or at the end
+                let modified: string;
+                if (html.includes("</body>")) {
+                    modified = html.replace("</body>", IFRAME_CAPTURE_SCRIPT + "</body>");
+                } else {
+                    modified = html + IFRAME_CAPTURE_SCRIPT;
+                }
+                setTemplateHtml(modified);
+            })
+            .catch((err) => {
+                if (!cancelled) setTemplateError(err?.message || "Failed to load template");
+            })
+            .finally(() => {
+                if (!cancelled) setTemplateLoading(false);
+            });
+
+        return () => { cancelled = true; };
+    }, [isHtmlTemplate, templateDocId]);
+
+    // Listen for postMessage from iframe
+    const handleIframeMessage = useCallback(
+        async (event: MessageEvent) => {
+            if (event.data?.type !== "FORM_SUBMIT" || !form) return;
+
+            setSaving(true);
+            setError(null);
+
+            try {
+                const res = await fetchWithAuth("/api/portal/form-submissions", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        formId: form.id,
+                        formKey: form.formKey,
+                        formTitle: form.title,
+                        formDescription: form.description,
+                        responseData: event.data.data,
+                    }),
+                });
+
+                if (res.ok) {
+                    setSubmitted(true);
+                } else {
+                    const data = await res.json().catch(() => ({}));
+                    setError(data.message || "Failed to submit form. Please try again.");
+                }
+            } catch {
+                setError("Failed to submit form. Please try again.");
+            } finally {
+                setSaving(false);
+            }
+        },
+        [form]
+    );
+
+    useEffect(() => {
+        if (!isHtmlTemplate) return;
+        window.addEventListener("message", handleIframeMessage);
+        return () => window.removeEventListener("message", handleIframeMessage);
+    }, [isHtmlTemplate, handleIframeMessage]);
 
     // Filter submissions for this specific form
     const formSubmissions = submissions.filter((s) => s.formKey === formKey);
@@ -201,7 +319,44 @@ export default function FormFillPage() {
                 </div>
 
                 {/* Fill Form Tab */}
-                {activeTab === "fill" && (
+                {activeTab === "fill" && isHtmlTemplate && (
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+                        {error && (
+                            <div className="mx-6 mt-4 px-4 py-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+                                {error}
+                            </div>
+                        )}
+                        {saving && (
+                            <div className="mx-6 mt-4 flex items-center gap-2 text-sm text-blue-600">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Submitting...
+                            </div>
+                        )}
+                        {templateLoading && (
+                            <div className="flex items-center justify-center py-16">
+                                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                            </div>
+                        )}
+                        {templateError && (
+                            <div className="px-6 py-12 text-center">
+                                <XCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
+                                <p className="text-sm text-gray-600">{templateError}</p>
+                            </div>
+                        )}
+                        {templateHtml && !templateLoading && (
+                            <iframe
+                                ref={iframeRef}
+                                srcDoc={templateHtml}
+                                className="w-full border-0"
+                                style={{ minHeight: "600px" }}
+                                sandbox="allow-scripts allow-forms allow-same-origin"
+                                title={`${form.title} form`}
+                            />
+                        )}
+                    </div>
+                )}
+
+                {activeTab === "fill" && !isHtmlTemplate && (
                     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                         {/* Form Fields */}
                         <div className="px-6 py-6">
@@ -257,8 +412,8 @@ export default function FormFillPage() {
                     </div>
                 )}
 
-                {/* JSON Preview (debug-friendly) */}
-                {activeTab === "fill" && Object.keys(formData).length > 0 && (
+                {/* JSON Preview (debug-friendly, JSON forms only) */}
+                {activeTab === "fill" && !isHtmlTemplate && Object.keys(formData).length > 0 && (
                     <details className="mt-4">
                         <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">
                             View response data (JSON)
