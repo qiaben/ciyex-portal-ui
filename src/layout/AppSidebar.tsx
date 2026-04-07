@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSidebar } from "../context/SidebarContext";
-import { usePortalConfig } from "@/hooks/usePortalConfig";
+import { usePortalConfig, usePortalForms } from "@/hooks/usePortalConfig";
 import { icons, Settings, Circle } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -17,29 +17,45 @@ const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const pathname = usePathname();
   const [isHydrated, setIsHydrated] = useState(false);
-  const isActive = useCallback((path: string) => path === pathname, [pathname]);
+  const isActive = useCallback(
+    (path: string) => path === pathname || (path.startsWith("/forms/") && !!pathname?.startsWith(path)),
+    [pathname],
+  );
 
   const { config, loading: configLoading, isFeatureEnabled } = usePortalConfig();
+  const { forms } = usePortalForms("custom");
 
   useEffect(() => {
     setIsHydrated(true);
   }, []);
 
-  // Build nav items entirely from config — no hardcoded maps or fallbacks
+  // Build nav items from config, replacing the generic "forms" entry with
+  // individual nav items for each active custom form
   const navItems = React.useMemo(() => {
     const configNav = config?.navigation;
     if (!configNav || configNav.length === 0) return [];
 
-    return configNav
+    const baseItems = configNav
       .filter((n) => n.visible)
       .sort((a, b) => a.position - b.position)
       .filter((n) => isFeatureEnabled(n.key))
+      // Remove generic "forms" entry — individual forms replace it
+      .filter((n) => n.key !== "forms")
       .map((n) => ({
         name: n.label,
         icon: resolveIcon(n.icon),
         path: n.path || `/${n.key}`,
       }));
-  }, [config?.navigation, isFeatureEnabled]);
+
+    // Inject each active custom form as its own sidebar item
+    const formItems = forms.map((f) => ({
+      name: f.title,
+      icon: resolveIcon("ClipboardList"),
+      path: `/forms/${f.formKey}`,
+    }));
+
+    return [...baseItems, ...formItems];
+  }, [config?.navigation, isFeatureEnabled, forms]);
 
   if (!isHydrated) {
     return (

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import AdminLayout from "@/app/(admin)/layout";
 import { usePortalForms, type PortalFormDef } from "@/hooks/usePortalConfig";
 import { useFormSubmissions, type FormSubmission } from "@/hooks/useFormSubmissions";
 import { ClipboardList, ChevronRight, Clock, CheckCircle2, XCircle, FileText } from "lucide-react";
@@ -16,95 +17,99 @@ export default function FormsPage() {
 
     if (loading) {
         return (
-            <div className="p-6">
-                <div className="animate-pulse space-y-4">
-                    <div className="h-8 bg-gray-200 rounded w-48" />
-                    <div className="h-4 bg-gray-200 rounded w-72" />
-                    <div className="space-y-3 mt-6">
-                        {[1, 2, 3].map((i) => (
-                            <div key={i} className="h-24 bg-gray-200 rounded-lg" />
-                        ))}
+            <AdminLayout>
+                <div className="p-6">
+                    <div className="animate-pulse space-y-4">
+                        <div className="h-8 bg-gray-200 rounded w-48" />
+                        <div className="h-4 bg-gray-200 rounded w-72" />
+                        <div className="space-y-3 mt-6">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="h-24 bg-gray-200 rounded-lg" />
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
+            </AdminLayout>
         );
     }
 
     return (
-        <div className="p-6 max-w-4xl mx-auto">
-            {/* Header */}
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <ClipboardList className="w-6 h-6 text-blue-600" />
-                    Forms
-                </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    Complete forms requested by your care team
-                </p>
-            </div>
+        <AdminLayout>
+            <div className="p-6 max-w-4xl mx-auto">
+                {/* Header */}
+                <div className="mb-6">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <ClipboardList className="w-6 h-6 text-blue-600" />
+                        Forms
+                    </h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        Complete forms requested by your care team
+                    </p>
+                </div>
 
-            {/* Tabs */}
-            <div className="flex items-center gap-1 mb-6 border-b border-gray-200">
-                <button
-                    onClick={() => setActiveTab("available")}
-                    className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                        activeTab === "available"
-                            ? "border-blue-600 text-blue-600"
-                            : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
-                >
-                    Available Forms ({forms.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab("submitted")}
-                    className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                        activeTab === "submitted"
-                            ? "border-blue-600 text-blue-600"
-                            : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
-                >
-                    My Submissions ({submissions.length})
-                </button>
-            </div>
+                {/* Tabs */}
+                <div className="flex items-center gap-1 mb-6 border-b border-gray-200">
+                    <button
+                        onClick={() => setActiveTab("available")}
+                        className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                            activeTab === "available"
+                                ? "border-blue-600 text-blue-600"
+                                : "border-transparent text-gray-500 hover:text-gray-700"
+                        }`}
+                    >
+                        Available Forms ({forms.length})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab("submitted")}
+                        className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                            activeTab === "submitted"
+                                ? "border-blue-600 text-blue-600"
+                                : "border-transparent text-gray-500 hover:text-gray-700"
+                        }`}
+                    >
+                        My Submissions ({submissions.length})
+                    </button>
+                </div>
 
-            {/* Available Forms */}
-            {activeTab === "available" && (
-                <div className="space-y-3">
-                    {forms.length === 0 ? (
-                        <EmptyState
-                            icon={<FileText className="w-12 h-12 text-gray-300" />}
-                            title="No Forms Available"
-                            description="There are no forms to complete at this time."
-                        />
-                    ) : (
-                        forms.map((form) => (
-                            <FormCard
-                                key={form.id}
-                                form={form}
-                                onClick={() => router.push(`/forms/${form.formKey}`)}
+                {/* Available Forms */}
+                {activeTab === "available" && (
+                    <div className="space-y-3">
+                        {forms.length === 0 ? (
+                            <EmptyState
+                                icon={<FileText className="w-12 h-12 text-gray-300" />}
+                                title="No Forms Available"
+                                description="There are no forms to complete at this time."
                             />
-                        ))
-                    )}
-                </div>
-            )}
+                        ) : (
+                            forms.map((form) => (
+                                <FormCard
+                                    key={form.id}
+                                    form={form}
+                                    onClick={() => router.push(`/forms/${form.formKey}`)}
+                                />
+                            ))
+                        )}
+                    </div>
+                )}
 
-            {/* Submissions */}
-            {activeTab === "submitted" && (
-                <div className="space-y-3">
-                    {submissions.length === 0 ? (
-                        <EmptyState
-                            icon={<ClipboardList className="w-12 h-12 text-gray-300" />}
-                            title="No Submissions"
-                            description="You haven't submitted any forms yet."
-                        />
-                    ) : (
-                        submissions.map((sub) => (
-                            <SubmissionCard key={sub.id} submission={sub} />
-                        ))
-                    )}
-                </div>
-            )}
-        </div>
+                {/* Submissions */}
+                {activeTab === "submitted" && (
+                    <div className="space-y-3">
+                        {submissions.length === 0 ? (
+                            <EmptyState
+                                icon={<ClipboardList className="w-12 h-12 text-gray-300" />}
+                                title="No Submissions"
+                                description="You haven't submitted any forms yet."
+                            />
+                        ) : (
+                            submissions.map((sub) => (
+                                <SubmissionCard key={sub.id} submission={sub} />
+                            ))
+                        )}
+                    </div>
+                )}
+            </div>
+        </AdminLayout>
     );
 }
 
