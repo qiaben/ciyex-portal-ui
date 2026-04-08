@@ -89,7 +89,8 @@ export default function FormFillPage() {
             .then(async (res) => {
                 if (cancelled) return;
                 if (!res.ok) throw new Error(`Failed to load template (${res.status})`);
-                const html = await res.text();
+                const json = await res.json();
+                const html = json.html || json.content || "";
                 // Inject the capture script before </body> or at the end
                 let modified: string;
                 if (html.includes("</body>")) {
