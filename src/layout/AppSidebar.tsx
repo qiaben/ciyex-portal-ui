@@ -22,7 +22,7 @@ const AppSidebar: React.FC = () => {
   );
 
   const { config, loading: configLoading, isFeatureEnabled } = usePortalConfig();
-  const { forms } = usePortalForms("custom");
+  const { forms } = usePortalForms();
 
   const isExpView = isExpanded || isHovered || isMobileOpen;
 

@@ -9,7 +9,7 @@ import { ClipboardList, ChevronRight, Clock, CheckCircle2, XCircle, FileText } f
 
 export default function FormsPage() {
     const router = useRouter();
-    const { forms, loading: formsLoading } = usePortalForms("custom");
+    const { forms, loading: formsLoading } = usePortalForms();
     const { submissions, loading: subsLoading } = useFormSubmissions();
     const [activeTab, setActiveTab] = useState<"available" | "submitted">("available");
 
