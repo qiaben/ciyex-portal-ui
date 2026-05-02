@@ -6,8 +6,6 @@ on:
     branches:
       - main
       - 'hotfix-*'
-    tags:
-      - 'v*'
   pull_request:
     branches:
       - main
@@ -462,11 +460,7 @@ jobs:
           BASE_RAW="${{ steps.base.outputs.base_version }}"
           BASE=$(echo "$BASE_RAW" | sed -E 's/-(alpha|rc).*$//')
 
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION="${GITHUB_REF#refs/tags/v}"
-            ENV="prod"
-            OVERLAY="prod"
-          elif [[ "${{ github.ref }}" == refs/heads/release-* ]]; then
+          if [[ "${{ github.ref }}" == refs/heads/release-* ]]; then
             RELEASE_MAJOR="${GITHUB_REF#refs/heads/release-}"
             RELEASE_MAJOR="${RELEASE_MAJOR%.x}"
 
@@ -586,7 +580,6 @@ jobs:
           echo "✅ Pushed: $REGISTRY/$IMAGE_NAME:$VERSION"
 
       - name: Create Git tag for alpha/rc
-        if: "!startsWith(github.ref, 'refs/tags/')"
         run: |
           VERSION="${{ needs.version.outputs.version }}"
           git config user.name "GitHub Actions"
