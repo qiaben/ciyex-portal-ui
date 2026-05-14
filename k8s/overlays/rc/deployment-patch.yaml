@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ciyex-portal-ui
+spec:
+  template:
+    spec:
+      containers:
+        - name: ciyex-portal-ui
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "rc"
+            - name: NEXT_PUBLIC_ENV
+              value: "rc"
+            - name: NEXT_PUBLIC_API_URL
+              value: "https://stg.ciyex.com"
+            - name: NEXT_PUBLIC_KEYCLOAK_ENABLED
+              value: "true"
+            - name: NEXT_PUBLIC_KEYCLOAK_URL
+              value: "https://aran-stg.zpoa.com"
+            - name: NEXT_PUBLIC_KEYCLOAK_REALM
+              value: "master"
+            - name: NEXT_PUBLIC_KEYCLOAK_CLIENT_ID
+              value: "ciyex-app"

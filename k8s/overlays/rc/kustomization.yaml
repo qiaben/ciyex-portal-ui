@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: default
+
+bases:
+  - ../../base
+
+nameSuffix: -rc
+
+images:
+  - name: ciyex-portal-ui
+    newName: IMAGE_URL
+    newTag: IMAGE_TAG
+
+replicas:
+  - name: ciyex-portal-ui
+    count: 1
+
+patches:
+  - path: deployment-patch.yaml
+  - path: ingress-patch.yaml
+
+configMapGenerator:
+  - name: portal-ui-config
+    envs:
+      - .env.rc
