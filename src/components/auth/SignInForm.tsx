@@ -15,6 +15,7 @@ interface PortalLoginResponse {
   city?: string;
   state?: string;
   country?: string;
+  orgAlias?: string;
   orgs: Array<{
     orgId: number;
     orgName: string;
@@ -64,6 +65,7 @@ export default function SignInForm() {
                     localStorage.removeItem("primaryGroup");
                     localStorage.removeItem("user");
                     localStorage.removeItem("orgId");
+                    localStorage.removeItem("orgAlias");
                     localStorage.removeItem("orgs");
                 }
             } catch (error) {
@@ -187,6 +189,9 @@ export default function SignInForm() {
             localStorage.setItem("userEmail", user.email);
             localStorage.setItem("userFullName", `${user.firstName} ${user.lastName}`.trim());
             localStorage.setItem("portalUserId", user.userId.toString());
+            if (user.orgAlias) {
+                localStorage.setItem("orgAlias", user.orgAlias);
+            }
 
             // Redirect after login
             router.replace("/dashboard");
