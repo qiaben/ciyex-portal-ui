@@ -70,7 +70,7 @@ jobs:
             --docker-username=${{ secrets.PROD_REGISTRY_USERNAME }} \
             --docker-password=${{ secrets.PROD_REGISTRY_PASSWORD }} \
             --namespace default \
-            --dry-run=client -o yaml | kubectl apply -f - --validate=false
+            --dry-run=client -o yaml | kubectl apply -f - --validate=false || true
 
       - name: Deploy to Stage
         run: kubectl apply -k k8s/overlays/stage/ --validate=false
