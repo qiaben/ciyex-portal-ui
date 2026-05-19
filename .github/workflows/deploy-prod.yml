@@ -61,8 +61,8 @@ jobs:
       - name: Verify deployment
         run: |
           kubectl rollout status deployment/ciyex-portal-ui-prod -n default --timeout=10m || true
-          kubectl get pods -l app=ciyex-portal-ui -n default -o wide
-          kubectl describe deployment ciyex-portal-ui-prod -n default | tail -20
+          kubectl get pods -l app=ciyex-portal-ui -n default -o wide || true
+          kubectl describe deployment ciyex-portal-ui-prod -n default | tail -20 || true
 
   notify:
     name: Notify Team
