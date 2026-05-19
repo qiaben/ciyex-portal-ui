@@ -35,9 +35,13 @@ export async function fetchWithAuth(
     });
   }
 
+  const orgAlias = typeof window !== "undefined" ? localStorage.getItem("orgAlias") : undefined;
+
   const authHeaders: Record<string, string> = {
     "Accept": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    // X-Tenant-Name drives PostgreSQL schema switching in RequestContextInterceptor
+    ...(orgAlias ? { "X-Tenant-Name": orgAlias } : {}),
   };
 
   // Don't set Content-Type for FormData - let browser set it automatically

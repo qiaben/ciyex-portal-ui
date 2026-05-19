@@ -6,8 +6,9 @@ import { signIn } from "next-auth/react";
 import ReCAPTCHA from "react-google-recaptcha";
 
 interface Org {
-  id: number;
+  orgAlias: string;
   orgName: string;
+  address?: string;
 }
 
 interface PortalApiResponse<T> {
@@ -28,7 +29,9 @@ interface PortalUserDto {
 export default function SignUpPage() {
   const router = useRouter();
   const [orgSearch, setOrgSearch] = useState("");
+  const [allOrgs, setAllOrgs] = useState<Org[]>([]);
   const [orgResults, setOrgResults] = useState<Org[]>([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(0);
 
   const [form, setForm] = useState({
@@ -47,7 +50,7 @@ export default function SignUpPage() {
     postalCode: "",
     securityQuestion: "",
     securityAnswer: "",
-    orgId: "",
+    orgAlias: "",
   });
 
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
@@ -60,16 +63,12 @@ export default function SignUpPage() {
     return String(err ?? 'Unknown error');
   }
 
-  // 🔹 Org search with autocomplete
+  // Load all orgs once on mount
   useEffect(() => {
-    const delayDebounce = setTimeout(async () => {
-      if (orgSearch.trim().length < 2) {
-        setOrgResults([]);
-        return;
-      }
+    (async () => {
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/portal/orgs/search?query=${encodeURIComponent(orgSearch)}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/api/portal/orgs/search?query=`,
           { headers: { Accept: "application/json" } }
         );
         const text = await res.text();
@@ -77,32 +76,51 @@ export default function SignUpPage() {
         try {
           data = JSON.parse(text);
         } catch {
-          console.error("Non-JSON response:", text);
-          setOrgResults([]);
+          console.error("Non-JSON org response:", text);
           return;
         }
         if (data.success && data.data) {
+          setAllOrgs(data.data);
           setOrgResults(data.data);
-          setHighlightIndex(0); // always highlight first
-        } else {
-          setOrgResults([]);
         }
       } catch (err) {
-        console.error("Failed to search orgs", err);
-        setOrgResults([]);
+        console.error("Failed to load orgs", err);
       }
-    }, 250);
-    return () => clearTimeout(delayDebounce);
-  }, [orgSearch]);
+    })();
+  }, []);
+
+  // Filter orgs locally as user types
+  useEffect(() => {
+    const q = orgSearch.trim().toLowerCase();
+    if (!q) {
+      setOrgResults(allOrgs);
+    } else {
+      setOrgResults(
+        allOrgs.filter(
+          (o) =>
+            o.orgName.toLowerCase().includes(q) ||
+            o.orgAlias.toLowerCase().includes(q) ||
+            (o.address ?? "").toLowerCase().includes(q)
+        )
+      );
+    }
+    setHighlightIndex(0);
+  }, [orgSearch, allOrgs]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleCaptcha = (token: string | null) => setCaptchaToken(token);
 
+  const selectOrg = (org: Org) => {
+    setForm({ ...form, orgAlias: org.orgAlias });
+    setOrgSearch(org.orgName);
+    setDropdownOpen(false);
+  };
+
   // ⌨️ Keyboard navigation for autocomplete
   const handleOrgKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (!orgResults.length) return;
+    if (!dropdownOpen || !orgResults.length) return;
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -115,11 +133,9 @@ export default function SignUpPage() {
     } else if (e.key === "Enter") {
       e.preventDefault();
       const selected = orgResults[highlightIndex];
-      if (selected) {
-        setForm({ ...form, orgId: selected.id.toString() });
-        setOrgSearch(selected.orgName);
-        setOrgResults([]);
-      }
+      if (selected) selectOrg(selected);
+    } else if (e.key === "Escape") {
+      setDropdownOpen(false);
     }
   };
 
@@ -131,7 +147,7 @@ export default function SignUpPage() {
       setError("Please verify the captcha.");
       return;
     }
-    if (!form.orgId) {
+    if (!form.orgAlias) {
       setError("Please select an organization.");
       return;
     }
@@ -156,7 +172,7 @@ export default function SignUpPage() {
           firstName: "", middleName: "", lastName: "", email: "", password: "",
           dateOfBirth: "", gender: "", phoneNumber: "", street: "", city: "",
           state: "", country: "", postalCode: "", securityQuestion: "",
-          securityAnswer: "", orgId: ""
+          securityAnswer: "", orgAlias: ""
         });
         setOrgSearch("");
         setCaptchaToken(null);
@@ -199,7 +215,7 @@ export default function SignUpPage() {
             lastName: session.user.name?.split(" ")[1] || "",
             email: session.user.email,
             password: crypto.randomUUID(),
-            orgId: form.orgId || 1, // fallback if none chosen
+            orgAlias: form.orgAlias,
             role: "PATIENT",
           }),
         }
@@ -305,33 +321,46 @@ export default function SignUpPage() {
             <input name="securityQuestion" placeholder="Security Question" value={form.securityQuestion} onChange={handleChange} className="border rounded px-2 py-1 col-span-2" />
             <input name="securityAnswer" placeholder="Security Answer" value={form.securityAnswer} onChange={handleChange} className="border rounded px-2 py-1 col-span-2" />
 
-            {/* Org Lookup */}
-            <input
-              placeholder="Search organization..."
-              value={orgSearch}
-              onChange={(e) => setOrgSearch(e.target.value)}
-              onKeyDown={handleOrgKeyDown}
-              className="border rounded px-2 py-1 col-span-2"
-            />
-            {orgResults.length > 0 && (
-              <div className="col-span-2 border rounded bg-white shadow max-h-32 overflow-y-auto">
-                {orgResults.map((org, idx) => (
-                  <div
-                    key={org.id}
-                    onClick={() => {
-                      setForm({ ...form, orgId: org.id.toString() });
-                      setOrgSearch(org.orgName);
-                      setOrgResults([]);
-                    }}
-                    className={`cursor-pointer px-2 py-1 ${
-                      idx === highlightIndex ? "bg-blue-100" : "hover:bg-gray-100"
-                    }`}
-                  >
-                    {org.orgName}
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* Org Dropdown */}
+            <div className="col-span-2 relative">
+              <input
+                placeholder="Select organization..."
+                value={orgSearch}
+                onChange={(e) => {
+                  setOrgSearch(e.target.value);
+                  setDropdownOpen(true);
+                  if (!e.target.value) setForm({ ...form, orgAlias: "" });
+                }}
+                onFocus={() => setDropdownOpen(true)}
+                onBlur={() => setTimeout(() => setDropdownOpen(false), 150)}
+                onKeyDown={handleOrgKeyDown}
+                className="border rounded px-2 py-1 w-full"
+                autoComplete="off"
+              />
+              {dropdownOpen && orgResults.length > 0 && (
+                <div className="absolute z-10 left-0 right-0 border rounded bg-white shadow max-h-48 overflow-y-auto">
+                  {orgResults.map((org, idx) => (
+                    <div
+                      key={org.orgAlias}
+                      onMouseDown={() => selectOrg(org)}
+                      className={`cursor-pointer px-2 py-1 ${
+                        idx === highlightIndex ? "bg-blue-100" : "hover:bg-gray-100"
+                      }`}
+                    >
+                      <span className="font-medium">{org.orgName}</span>
+                      {org.address && (
+                        <span className="text-gray-400 ml-2 text-xs">{org.address}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {dropdownOpen && orgResults.length === 0 && orgSearch.trim() && (
+                <div className="absolute z-10 left-0 right-0 border rounded bg-white shadow px-2 py-1 text-gray-400 text-xs">
+                  No organizations found
+                </div>
+              )}
+            </div>
 
             {/* Captcha */}
             <div className="flex justify-center col-span-2 my-2">
