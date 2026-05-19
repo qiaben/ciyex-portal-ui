@@ -69,6 +69,7 @@ jobs:
             --docker-server=$REGISTRY \
             --docker-username=${{ secrets.PROD_REGISTRY_USERNAME }} \
             --docker-password=${{ secrets.PROD_REGISTRY_PASSWORD }} \
+            --namespace default \
             --dry-run=client -o yaml | kubectl apply -f - --validate=false
 
       - name: Deploy to Stage
