@@ -29,82 +29,97 @@ interface FieldDef {
 
 interface SectionDef {
   title: string;
+  note?: string;
   fields: FieldDef[];
 }
 
-// Intake structure adapted from the practice's "Simple Client Intake" template.
+// Reusable option lists (mirrors the paper "Prudent Medical Registration" form).
+const RELATIONSHIP_OPTIONS = ["", "Self", "Spouse", "Child", "Parent", "Other"];
+
+// Intake structure mirrors the practice's "Prudent Medical Registration" form.
 const SECTIONS: SectionDef[] = [
-  {
-    title: "Visit Information",
-    fields: [
-      { name: "intakeDate", label: "Date", type: "date" },
-      { name: "providerName", label: "Provider / Associate" },
-      { name: "reasonForVisit", label: "Reason for Visit", type: "textarea", colSpan: 2, placeholder: "Briefly describe the reason for your visit" },
-    ],
-  },
   {
     title: "Patient Information",
     fields: [
-      { name: "firstName", label: "First Name", required: true },
+      { name: "prefix", label: "Title", type: "select", options: ["", "Dr.", "Miss", "Mr.", "Mrs.", "Ms.", "Sir"] },
       { name: "lastName", label: "Last Name", required: true },
+      { name: "firstName", label: "First Name", required: true },
+      { name: "middleInitial", label: "Middle Initial" },
       { name: "dateOfBirth", label: "Date of Birth", type: "date", required: true },
-      { name: "sex", label: "Sex", type: "select", options: ["", "Male", "Female", "Other", "Prefer not to say"] },
-      { name: "maritalStatus", label: "Marital Status", type: "select", options: ["", "Single", "Married", "Divorced", "Widowed", "Other"] },
-      { name: "ssn", label: "SSN (optional)", placeholder: "###-##-####" },
-    ],
-  },
-  {
-    title: "Contact",
-    fields: [
-      { name: "homePhone", label: "Home Phone", type: "tel" },
-      { name: "mobilePhone", label: "Mobile Phone", type: "tel", required: true },
-      { name: "workPhone", label: "Work Phone", type: "tel" },
-      { name: "email", label: "Email", type: "email" },
-    ],
-  },
-  {
-    title: "Home Address",
-    fields: [
+      { name: "sex", label: "Sex", type: "select", options: ["", "Female", "Male", "Transgender"] },
+      { name: "ssn", label: "Social Security Number", placeholder: "###-##-####" },
+      { name: "maritalStatus", label: "Marital Status", type: "select", options: ["", "Married", "Single", "Divorced", "Widowed", "Legally Separated", "Partner"] },
       { name: "addressLine1", label: "Address Line 1", colSpan: 2 },
       { name: "addressLine2", label: "Address Line 2", colSpan: 2 },
       { name: "city", label: "City" },
       { name: "state", label: "State" },
-      { name: "postalCode", label: "Postal Code" },
-      { name: "country", label: "Country" },
+      { name: "postalCode", label: "Zip Code" },
+      { name: "homePhone", label: "Home Phone", type: "tel" },
+      { name: "mobilePhone", label: "Cell Phone", type: "tel", required: true },
+      { name: "workPhone", label: "Work Phone", type: "tel" },
+      { name: "workPhoneExt", label: "Work Ext." },
+      { name: "email", label: "Email", type: "email" },
+      { name: "race", label: "Race", type: "select", options: ["", "American Indian/Alaska Native", "Asian", "Native Hawaiian/Pacific Islander", "Black/African American", "White", "Hispanic", "Other"] },
+      { name: "ethnicity", label: "Ethnicity", type: "select", options: ["", "Hispanic or Latino", "Not Hispanic or Latino", "Decline to answer"] },
+      { name: "language", label: "Preferred Language", type: "select", options: ["", "English", "Spanish", "Indian", "Japanese", "Chinese", "German", "Russian", "Other"] },
+      { name: "employerName", label: "Employer Name" },
+      { name: "employerPhone", label: "Employer Phone", type: "tel" },
+      { name: "employmentStatus", label: "Employment Status", type: "select", options: ["", "Full-time", "Part-time", "Self-Employed", "Retired", "Active Military"] },
+      { name: "studentStatus", label: "Student Status", type: "select", options: ["", "Full-time", "Part-time", "Not a Student"] },
     ],
   },
   {
-    title: "Employment",
+    title: "Primary Insurance Information",
     fields: [
-      { name: "employer", label: "Employer / Company" },
-      { name: "occupation", label: "Position / Title" },
-      { name: "supervisor", label: "Supervisor" },
-      { name: "department", label: "Department" },
-      { name: "workAddress", label: "Work Address", colSpan: 2 },
+      { name: "primaryInsuranceCompany", label: "Insurance Company" },
+      { name: "primaryInsurancePhone", label: "Insurance Phone", type: "tel" },
+      { name: "primaryInsuredName", label: "Name of Insured" },
+      { name: "primaryRelationshipToInsured", label: "Relationship to Insured", type: "select", options: RELATIONSHIP_OPTIONS },
+      { name: "primarySubscriberId", label: "Subscriber ID (Policy Number)" },
+      { name: "primaryGroupId", label: "Group ID" },
+      { name: "primaryCopay", label: "Copay ($)" },
+      { name: "primaryInsuredDob", label: "Insured Date of Birth", type: "date" },
+      { name: "primaryEffectiveDate", label: "Effective Date", type: "date" },
+      { name: "primaryTerminationDate", label: "Termination Date", type: "date" },
+    ],
+  },
+  {
+    title: "Secondary Insurance Information",
+    fields: [
+      { name: "secondaryInsuranceCompany", label: "Insurance Company" },
+      { name: "secondaryInsurancePhone", label: "Insurance Phone", type: "tel" },
+      { name: "secondaryInsuredName", label: "Name of Insured" },
+      { name: "secondaryRelationshipToInsured", label: "Relationship to Insured", type: "select", options: RELATIONSHIP_OPTIONS },
+      { name: "secondarySubscriberId", label: "Subscriber ID (Policy Number)" },
+      { name: "secondaryGroupId", label: "Group ID" },
+      { name: "secondaryCopay", label: "Copay ($)" },
+      { name: "secondaryInsuredDob", label: "Insured Date of Birth", type: "date" },
+      { name: "secondaryEffectiveDate", label: "Effective Date", type: "date" },
+      { name: "secondaryTerminationDate", label: "Termination Date", type: "date" },
     ],
   },
   {
     title: "Emergency Contact",
     fields: [
-      { name: "emergencyContactName", label: "Name" },
-      { name: "emergencyContactPhone", label: "Phone", type: "tel" },
-      { name: "emergencyContactRelationship", label: "Relationship" },
+      { name: "emergencyContact1Name", label: "Contact 1 — Name" },
+      { name: "emergencyContact1Relationship", label: "Contact 1 — Relationship" },
+      { name: "emergencyContact1Cell", label: "Contact 1 — Cell", type: "tel" },
+      { name: "emergencyContact1Work", label: "Contact 1 — Work", type: "tel" },
+      { name: "emergencyContact1Other", label: "Contact 1 — Other Phone", type: "tel" },
+      { name: "emergencyContact2Name", label: "Contact 2 — Name" },
+      { name: "emergencyContact2Relationship", label: "Contact 2 — Relationship" },
+      { name: "emergencyContact2Cell", label: "Contact 2 — Cell", type: "tel" },
+      { name: "emergencyContact2Work", label: "Contact 2 — Work", type: "tel" },
+      { name: "emergencyContact2Other", label: "Contact 2 — Other Phone", type: "tel" },
     ],
   },
   {
-    title: "Insurance",
+    title: "Authorization & Release",
+    note:
+      "I authorize release of any information concerning my (or my child's) health care, advice and treatment provided for the purpose of evaluating and administering claims for insurance benefits. I also authorize payment of insurance benefits otherwise payable to me directly to the doctor.",
     fields: [
-      { name: "insuranceProvider", label: "Insurance Provider" },
-      { name: "insuranceMemberId", label: "Member ID" },
-      { name: "insuranceGroupNumber", label: "Group Number" },
-    ],
-  },
-  {
-    title: "Additional Information",
-    fields: [
-      { name: "referredBy", label: "Referred By" },
-      { name: "previousPatient", label: "Have you been seen here before?", type: "select", options: ["", "No", "Yes"] },
-      { name: "comments", label: "Comments", type: "textarea", colSpan: 2, placeholder: "Anything else we should know" },
+      { name: "signature", label: "Signature (type your full name)", required: true, colSpan: 2, placeholder: "Signature of patient (or parent/guardian if minor)" },
+      { name: "signatureDate", label: "Date", type: "date" },
     ],
   },
 ];
@@ -248,6 +263,9 @@ export default function PatientIntakePage() {
               className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow border border-gray-200 dark:border-gray-700"
             >
               <h2 className="text-lg font-semibold mb-4">{section.title}</h2>
+              {section.note && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{section.note}</p>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {section.fields.map((field) => (
                   <Field
