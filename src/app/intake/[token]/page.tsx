@@ -67,7 +67,7 @@ const SECTIONS: SectionDef[] = [
       { name: "employerName", label: "Employer Name" },
       { name: "employerPhone", label: "Employer Phone", type: "tel" },
       { name: "employmentStatus", label: "Employment Status", type: "select", options: ["", "Full-time", "Part-time", "Self-Employed", "Retired", "Active Military"] },
-      { name: "studentStatus", label: "Student Status", type: "select", options: ["", "Full-time", "Part-time", "Not a Student"] },
+      { name: "studentStatus", label: "Student Status", type: "select", options: ["", "I am a student", "I am not a student"] },
     ],
   },
   {
