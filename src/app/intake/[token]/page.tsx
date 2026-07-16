@@ -35,6 +35,8 @@ interface SectionDef {
 
 // Reusable option lists (mirrors the paper "Prudent Medical Registration" form).
 const RELATIONSHIP_OPTIONS = ["", "Self", "Spouse", "Child", "Parent", "Other"];
+// Plan types mirror the chart's Insurance tab "Plan Type" options.
+const PLAN_TYPE_OPTIONS = ["", "HMO", "PPO", "EPO", "POS", "HDHP", "Medicare", "Medicaid", "TRICARE", "Workers' Comp", "Other"];
 
 // Intake structure mirrors the practice's "Prudent Medical Registration" form.
 const SECTIONS: SectionDef[] = [
@@ -72,6 +74,8 @@ const SECTIONS: SectionDef[] = [
     title: "Primary Insurance Information",
     fields: [
       { name: "primaryInsuranceCompany", label: "Insurance Company" },
+      { name: "primaryPlanName", label: "Plan Name", placeholder: "e.g. Blue Cross PPO Gold" },
+      { name: "primaryPlanType", label: "Plan Type", type: "select", options: PLAN_TYPE_OPTIONS },
       { name: "primaryInsurancePhone", label: "Insurance Phone", type: "tel" },
       { name: "primaryInsuredName", label: "Name of Insured" },
       { name: "primaryRelationshipToInsured", label: "Relationship to Insured", type: "select", options: RELATIONSHIP_OPTIONS },
@@ -87,6 +91,8 @@ const SECTIONS: SectionDef[] = [
     title: "Secondary Insurance Information",
     fields: [
       { name: "secondaryInsuranceCompany", label: "Insurance Company" },
+      { name: "secondaryPlanName", label: "Plan Name", placeholder: "e.g. Blue Cross PPO Gold" },
+      { name: "secondaryPlanType", label: "Plan Type", type: "select", options: PLAN_TYPE_OPTIONS },
       { name: "secondaryInsurancePhone", label: "Insurance Phone", type: "tel" },
       { name: "secondaryInsuredName", label: "Name of Insured" },
       { name: "secondaryRelationshipToInsured", label: "Relationship to Insured", type: "select", options: RELATIONSHIP_OPTIONS },
