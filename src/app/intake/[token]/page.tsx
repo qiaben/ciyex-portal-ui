@@ -245,28 +245,28 @@ export default function PatientIntakePage() {
 
   /* ---------- Form ---------- */
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
-      <div className="mx-auto max-w-3xl space-y-6">
-        <div className="bg-gradient-to-r from-purple-500 to-orange-500 text-white p-6 rounded-xl shadow">
-          <h1 className="text-2xl font-bold">Patient Intake Form</h1>
-          <p className="opacity-90 text-sm">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-5 px-4 text-sm">
+      <div className="mx-auto max-w-4xl space-y-3">
+        <div className="bg-gradient-to-r from-purple-500 to-orange-500 text-white px-4 py-3 rounded-lg shadow">
+          <h1 className="text-lg font-bold">Patient Intake Form</h1>
+          <p className="opacity-90 text-xs">
             {practiceName ? `${practiceName} — ` : ""}Please complete the form below. Fields marked * are required.
           </p>
         </div>
 
         {alert && <Alert variant={alert.variant} title={alert.title} message={alert.message} />}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {SECTIONS.map((section) => (
             <section
               key={section.title}
-              className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow border border-gray-200 dark:border-gray-700"
+              className="bg-white dark:bg-gray-800 px-4 py-3 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
             >
-              <h2 className="text-lg font-semibold mb-4">{section.title}</h2>
+              <h2 className="text-sm font-semibold mb-2 text-gray-800 dark:text-gray-100">{section.title}</h2>
               {section.note && (
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{section.note}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{section.note}</p>
               )}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                 {section.fields.map((field) => (
                   <Field
                     key={field.name}
@@ -279,11 +279,11 @@ export default function PatientIntakePage() {
             </section>
           ))}
 
-          <div className="flex justify-end">
+          <div className="flex justify-end pb-2">
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-3 bg-green-500 text-white rounded-lg font-medium disabled:opacity-60"
+              className="px-5 py-2 text-sm bg-green-500 text-white rounded-md font-medium disabled:opacity-60"
             >
               {submitting ? "Submitting…" : "Submit Intake Form"}
             </button>
@@ -307,22 +307,22 @@ function Field({
   value: string;
   onChange: (name: string, value: string) => void;
 }) {
-  const span = field.colSpan === 2 ? "md:col-span-2" : "";
+  const span = field.colSpan === 2 ? "col-span-2" : "";
   const labelEl = (
-    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">
+    <label className="block text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-0.5 truncate">
       {field.label}
       {field.required ? <span className="text-error-500"> *</span> : null}
     </label>
   );
-  const base = "w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-900";
+  const base = "w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white dark:bg-gray-900";
 
   if (field.type === "textarea") {
     return (
-      <div className={`space-y-1 ${span}`}>
+      <div className={`space-y-0.5 ${span}`}>
         {labelEl}
         <textarea
           name={field.name}
-          rows={3}
+          rows={2}
           placeholder={field.placeholder}
           value={value}
           onChange={(e) => onChange(field.name, e.target.value)}
@@ -334,7 +334,7 @@ function Field({
 
   if (field.type === "select") {
     return (
-      <div className={`space-y-1 ${span}`}>
+      <div className={`space-y-0.5 ${span}`}>
         {labelEl}
         <select
           name={field.name}
@@ -353,7 +353,7 @@ function Field({
   }
 
   return (
-    <div className={`space-y-1 ${span}`}>
+    <div className={`space-y-0.5 ${span}`}>
       {labelEl}
       <input
         name={field.name}
