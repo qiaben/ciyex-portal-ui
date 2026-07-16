@@ -61,7 +61,7 @@ const SECTIONS: SectionDef[] = [
       { name: "workPhone", label: "Work Phone", type: "tel" },
       { name: "workPhoneExt", label: "Work Ext." },
       { name: "email", label: "Email", type: "email" },
-      { name: "race", label: "Race", type: "select", options: ["", "American Indian/Alaska Native", "Asian", "Native Hawaiian/Pacific Islander", "Black/African American", "White", "Hispanic", "Other"] },
+      { name: "race", label: "Race", type: "select", options: ["", "American Indian/Alaska Native", "Asian", "Native Hawaiian/Pacific Islander", "Black/African American", "White", "Hispanic", "Prefer not to say"] },
       { name: "ethnicity", label: "Ethnicity", type: "select", options: ["", "Hispanic or Latino", "Not Hispanic or Latino", "Decline to answer"] },
       { name: "language", label: "Preferred Language", type: "select", options: ["", "English", "Spanish", "Indian", "Japanese", "Chinese", "German", "Russian", "Other"] },
       { name: "employerName", label: "Employer Name" },
