@@ -126,6 +126,28 @@ const SECTIONS: SectionDef[] = [
 
 type Responses = Record<string, string>;
 
+/** Format/limit a value to a US phone number as the user types: (XXX) XXX-XXXX. */
+function formatUsPhone(input: string): string {
+  let digits = input.replace(/\D/g, "");
+  // Drop a leading US country code if present.
+  if (digits.length === 11 && digits.startsWith("1")) {
+    digits = digits.slice(1);
+  }
+  digits = digits.slice(0, 10);
+  const area = digits.slice(0, 3);
+  const mid = digits.slice(3, 6);
+  const last = digits.slice(6, 10);
+  if (digits.length > 6) return `(${area}) ${mid}-${last}`;
+  if (digits.length > 3) return `(${area}) ${mid}`;
+  if (digits.length > 0) return `(${area}`;
+  return "";
+}
+
+/** A US phone number is complete when it has exactly 10 digits. */
+function isValidUsPhone(value: string): boolean {
+  return value.replace(/\D/g, "").length === 10;
+}
+
 export default function PatientIntakePage() {
   const params = useParams();
   const token = params?.token as string;
@@ -194,6 +216,15 @@ export default function PatientIntakePage() {
     const missing = firstMissingRequired();
     if (missing) {
       setAlert({ variant: "error", title: "Missing information", message: `Please fill in "${missing.label}".` });
+      return;
+    }
+
+    // Any filled phone field must be a complete 10-digit US number.
+    const badPhone = allFields.find(
+      (f) => f.type === "tel" && (responses[f.name] || "").trim() && !isValidUsPhone(responses[f.name] || "")
+    );
+    if (badPhone) {
+      setAlert({ variant: "error", title: "Invalid phone number", message: `"${badPhone.label}" must be a 10-digit US phone number, e.g. (555) 123-4567.` });
       return;
     }
 
@@ -352,15 +383,18 @@ function Field({
     );
   }
 
+  const isTel = field.type === "tel";
   return (
     <div className={`space-y-0.5 ${span}`}>
       {labelEl}
       <input
         name={field.name}
-        type={field.type || "text"}
-        placeholder={field.placeholder}
+        type={isTel ? "tel" : field.type || "text"}
+        inputMode={isTel ? "numeric" : undefined}
+        maxLength={isTel ? 14 : undefined}
+        placeholder={field.placeholder || (isTel ? "(555) 123-4567" : undefined)}
         value={value}
-        onChange={(e) => onChange(field.name, e.target.value)}
+        onChange={(e) => onChange(field.name, isTel ? formatUsPhone(e.target.value) : e.target.value)}
         className={base}
       />
     </div>
