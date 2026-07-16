@@ -167,7 +167,24 @@ export default function PatientIntakePage() {
   const [practiceName, setPracticeName] = useState<string>("");
   const [alert, setAlert] = useState<{ variant: "success" | "error"; title: string; message: string } | null>(null);
 
+  // OTP gate — the form only unlocks after the patient verifies a code sent to
+  // the same phone/email the intake link was sent to.
+  const [verificationToken, setVerificationToken] = useState<string>("");
+  const [otpChannel, setOtpChannel] = useState<string>("");
+  const [maskedRecipient, setMaskedRecipient] = useState<string>("");
+  const [otpInput, setOtpInput] = useState<string>("");
+  const [otpError, setOtpError] = useState<string>("");
+  const [otpBusy, setOtpBusy] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
+
   const allFields = useMemo(() => SECTIONS.flatMap((s) => s.fields), []);
+
+  // Resend cooldown countdown.
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const id = setTimeout(() => setResendIn((n) => n - 1), 1000);
+    return () => clearTimeout(id);
+  }, [resendIn]);
 
   /* Validate the token and pull any prefilled contact details. */
   useEffect(() => {
@@ -193,19 +210,76 @@ export default function PatientIntakePage() {
           if (data?.practiceName) {
             setPracticeName(String(data.practiceName));
           }
-          const prefill = (data?.prefill ?? {}) as Responses;
-          setResponses({ ...prefill });
+          if (data?.channel) setOtpChannel(String(data.channel));
+          if (data?.maskedRecipient) setMaskedRecipient(String(data.maskedRecipient));
+          // Auto-send the verification code to the original phone/email.
+          void sendOtp();
+        } else {
+          setInvalid("This intake link is no longer valid or has expired. Please contact the practice for a new link.");
         }
-        // If the endpoint isn't available yet, fall through to a blank form
-        // rather than blocking the patient.
       } catch {
-        // Network/endpoint not ready — show a blank form.
+        setInvalid("We couldn't load your intake form. Please check your connection and try again.");
       } finally {
         setLoading(false);
       }
     }
     loadIntake();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [API, token]);
+
+  async function sendOtp(): Promise<void> {
+    setOtpError("");
+    setOtpBusy(true);
+    try {
+      const res = await fetch(`${API}/api/intake/public/${encodeURIComponent(token)}/otp/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setOtpError(body?.message || "Couldn't send the code. Please try again.");
+        return;
+      }
+      const data = body?.data ?? {};
+      if (data?.channel) setOtpChannel(String(data.channel));
+      if (data?.maskedRecipient) setMaskedRecipient(String(data.maskedRecipient));
+      setResendIn(30);
+    } catch {
+      setOtpError("Network error sending the code. Please try again.");
+    } finally {
+      setOtpBusy(false);
+    }
+  }
+
+  async function verifyOtp(e: React.FormEvent): Promise<void> {
+    e.preventDefault();
+    setOtpError("");
+    if (otpInput.trim().length < 4) {
+      setOtpError("Enter the code we sent you.");
+      return;
+    }
+    setOtpBusy(true);
+    try {
+      const res = await fetch(`${API}/api/intake/public/${encodeURIComponent(token)}/otp/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ code: otpInput.trim() }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setOtpError(body?.message || "Incorrect code. Please try again.");
+        return;
+      }
+      const data = body?.data ?? {};
+      setVerificationToken(String(data?.verificationToken || ""));
+      if (data?.practiceName) setPracticeName(String(data.practiceName));
+      setResponses({ ...((data?.prefill ?? {}) as Responses) });
+    } catch {
+      setOtpError("Network error verifying the code. Please try again.");
+    } finally {
+      setOtpBusy(false);
+    }
+  }
 
   function handleChange(name: string, value: string) {
     setResponses((prev) => ({ ...prev, [name]: value }));
@@ -239,7 +313,7 @@ export default function PatientIntakePage() {
       const res = await fetch(`${API}/api/intake/public/${encodeURIComponent(token)}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ responses }),
+        body: JSON.stringify({ responses, verificationToken }),
       });
       if (!res.ok) {
         const text = await res.text().catch(() => "");
@@ -276,6 +350,58 @@ export default function PatientIntakePage() {
             Your intake form has been submitted{practiceName ? ` to ${practiceName}` : ""}. The care team will review it before your visit.
           </p>
         </div>
+      </CenteredCard>
+    );
+  }
+
+  /* ---------- OTP gate ---------- */
+  if (!verificationToken) {
+    const channelWord = otpChannel === "SMS" ? "text message" : "email";
+    return (
+      <CenteredCard>
+        <form onSubmit={verifyOtp} className="space-y-4">
+          <div className="text-center space-y-1">
+            <div className="text-4xl">🔒</div>
+            <h1 className="text-xl font-semibold">Verify it&apos;s you</h1>
+            <p className="text-sm text-gray-500">
+              We sent a 6-digit code by {channelWord}
+              {maskedRecipient ? <> to <span className="font-medium">{maskedRecipient}</span></> : ""}.
+              Enter it to open your intake form.
+            </p>
+          </div>
+
+          {otpError && <Alert variant="error" title="Verification" message={otpError} />}
+
+          <input
+            name="otp"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            placeholder="Enter 6-digit code"
+            value={otpInput}
+            onChange={(e) => setOtpInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            className="w-full text-center tracking-[0.5em] text-lg px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white dark:bg-gray-900"
+          />
+
+          <button
+            type="submit"
+            disabled={otpBusy || otpInput.length < 4}
+            className="w-full px-5 py-2 text-sm bg-green-500 text-white rounded-md font-medium disabled:opacity-60"
+          >
+            {otpBusy ? "Verifying…" : "Verify & continue"}
+          </button>
+
+          <div className="text-center text-xs text-gray-500">
+            Didn&apos;t get it?{" "}
+            {resendIn > 0 ? (
+              <span>Resend in {resendIn}s</span>
+            ) : (
+              <button type="button" onClick={() => void sendOtp()} disabled={otpBusy} className="text-blue-600 hover:underline disabled:opacity-60">
+                Resend code
+              </button>
+            )}
+          </div>
+        </form>
       </CenteredCard>
     );
   }
