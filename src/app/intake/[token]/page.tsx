@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Alert from "@/components/ui/alert/Alert";
 
@@ -44,27 +44,27 @@ const SECTIONS: SectionDef[] = [
     title: "Patient Information",
     fields: [
       { name: "prefix", label: "Title", type: "select", options: ["", "Dr.", "Miss", "Mr.", "Mrs.", "Ms.", "Sir"] },
-      { name: "lastName", label: "Last Name", required: true },
-      { name: "firstName", label: "First Name", required: true },
-      { name: "middleInitial", label: "Middle Initial" },
+      { name: "lastName", label: "Last Name", required: true, placeholder: "Last name" },
+      { name: "firstName", label: "First Name", required: true, placeholder: "First name" },
+      { name: "middleInitial", label: "Middle Initial", placeholder: "M" },
       { name: "dateOfBirth", label: "Date of Birth", type: "date", required: true },
       { name: "sex", label: "Sex", type: "select", options: ["", "Female", "Male", "Transgender"] },
       { name: "ssn", label: "Social Security Number", placeholder: "###-##-####" },
       { name: "maritalStatus", label: "Marital Status", type: "select", options: ["", "Married", "Single", "Divorced", "Widowed", "Legally Separated", "Partner"] },
-      { name: "addressLine1", label: "Address Line 1", colSpan: 2 },
-      { name: "addressLine2", label: "Address Line 2", colSpan: 2 },
-      { name: "city", label: "City" },
-      { name: "state", label: "State" },
-      { name: "postalCode", label: "Zip Code" },
+      { name: "addressLine1", label: "Address Line 1", colSpan: 2, placeholder: "Street address" },
+      { name: "addressLine2", label: "Address Line 2", colSpan: 2, placeholder: "Apt, suite, unit (optional)" },
+      { name: "city", label: "City", placeholder: "City" },
+      { name: "state", label: "State", placeholder: "State" },
+      { name: "postalCode", label: "Zip Code", placeholder: "Enter ZIP — city & state auto-fill" },
       { name: "homePhone", label: "Home Phone", type: "tel" },
       { name: "mobilePhone", label: "Cell Phone", type: "tel", required: true },
       { name: "workPhone", label: "Work Phone", type: "tel" },
-      { name: "workPhoneExt", label: "Work Ext." },
-      { name: "email", label: "Email", type: "email" },
+      { name: "workPhoneExt", label: "Work Ext.", placeholder: "e.g. 1234" },
+      { name: "email", label: "Email", type: "email", placeholder: "you@example.com" },
       { name: "race", label: "Race", type: "select", options: ["", "American Indian/Alaska Native", "Asian", "Native Hawaiian/Pacific Islander", "Black/African American", "White", "Hispanic", "Prefer not to say"] },
       { name: "ethnicity", label: "Ethnicity", type: "select", options: ["", "Hispanic or Latino", "Not Hispanic or Latino", "Decline to answer"] },
       { name: "language", label: "Preferred Language", type: "select", options: ["", "English", "Spanish", "Indian", "Japanese", "Chinese", "German", "Russian", "Other"] },
-      { name: "employerName", label: "Employer Name" },
+      { name: "employerName", label: "Employer Name", placeholder: "Employer / company name" },
       { name: "employerPhone", label: "Employer Phone", type: "tel" },
       { name: "employmentStatus", label: "Employment Status", type: "select", options: ["", "Full-time", "Part-time", "Self-Employed", "Retired", "Active Military"] },
       { name: "studentStatus", label: "Student Status", type: "select", options: ["", "I am a student", "I am not a student"] },
@@ -73,15 +73,15 @@ const SECTIONS: SectionDef[] = [
   {
     title: "Primary Insurance Information",
     fields: [
-      { name: "primaryInsuranceCompany", label: "Insurance Company" },
+      { name: "primaryInsuranceCompany", label: "Insurance Company", placeholder: "Insurance company name" },
       { name: "primaryPlanName", label: "Plan Name", placeholder: "e.g. Blue Cross PPO Gold" },
       { name: "primaryPlanType", label: "Plan Type", type: "select", options: PLAN_TYPE_OPTIONS },
       { name: "primaryInsurancePhone", label: "Insurance Phone", type: "tel" },
-      { name: "primaryInsuredName", label: "Name of Insured" },
+      { name: "primaryInsuredName", label: "Name of Insured", placeholder: "Full name of the insured" },
       { name: "primaryRelationshipToInsured", label: "Relationship to Insured", type: "select", options: RELATIONSHIP_OPTIONS },
-      { name: "primarySubscriberId", label: "Subscriber ID (Policy Number)" },
-      { name: "primaryGroupId", label: "Group ID" },
-      { name: "primaryCopay", label: "Copay ($)" },
+      { name: "primarySubscriberId", label: "Subscriber ID (Policy Number)", placeholder: "Policy number" },
+      { name: "primaryGroupId", label: "Group ID", placeholder: "Group number" },
+      { name: "primaryCopay", label: "Copay ($)", placeholder: "e.g. 25" },
       { name: "primaryInsuredDob", label: "Insured Date of Birth", type: "date" },
       { name: "primaryEffectiveDate", label: "Effective Date", type: "date" },
       { name: "primaryTerminationDate", label: "Termination Date", type: "date" },
@@ -90,15 +90,15 @@ const SECTIONS: SectionDef[] = [
   {
     title: "Secondary Insurance Information",
     fields: [
-      { name: "secondaryInsuranceCompany", label: "Insurance Company" },
+      { name: "secondaryInsuranceCompany", label: "Insurance Company", placeholder: "Insurance company name" },
       { name: "secondaryPlanName", label: "Plan Name", placeholder: "e.g. Blue Cross PPO Gold" },
       { name: "secondaryPlanType", label: "Plan Type", type: "select", options: PLAN_TYPE_OPTIONS },
       { name: "secondaryInsurancePhone", label: "Insurance Phone", type: "tel" },
-      { name: "secondaryInsuredName", label: "Name of Insured" },
+      { name: "secondaryInsuredName", label: "Name of Insured", placeholder: "Full name of the insured" },
       { name: "secondaryRelationshipToInsured", label: "Relationship to Insured", type: "select", options: RELATIONSHIP_OPTIONS },
-      { name: "secondarySubscriberId", label: "Subscriber ID (Policy Number)" },
-      { name: "secondaryGroupId", label: "Group ID" },
-      { name: "secondaryCopay", label: "Copay ($)" },
+      { name: "secondarySubscriberId", label: "Subscriber ID (Policy Number)", placeholder: "Policy number" },
+      { name: "secondaryGroupId", label: "Group ID", placeholder: "Group number" },
+      { name: "secondaryCopay", label: "Copay ($)", placeholder: "e.g. 25" },
       { name: "secondaryInsuredDob", label: "Insured Date of Birth", type: "date" },
       { name: "secondaryEffectiveDate", label: "Effective Date", type: "date" },
       { name: "secondaryTerminationDate", label: "Termination Date", type: "date" },
@@ -107,13 +107,13 @@ const SECTIONS: SectionDef[] = [
   {
     title: "Emergency Contact",
     fields: [
-      { name: "emergencyContact1Name", label: "Contact 1 — Name" },
-      { name: "emergencyContact1Relationship", label: "Contact 1 — Relationship" },
+      { name: "emergencyContact1Name", label: "Contact 1 — Name", placeholder: "Full name" },
+      { name: "emergencyContact1Relationship", label: "Contact 1 — Relationship", placeholder: "e.g. Spouse" },
       { name: "emergencyContact1Cell", label: "Contact 1 — Cell", type: "tel" },
       { name: "emergencyContact1Work", label: "Contact 1 — Work", type: "tel" },
       { name: "emergencyContact1Other", label: "Contact 1 — Other Phone", type: "tel" },
-      { name: "emergencyContact2Name", label: "Contact 2 — Name" },
-      { name: "emergencyContact2Relationship", label: "Contact 2 — Relationship" },
+      { name: "emergencyContact2Name", label: "Contact 2 — Name", placeholder: "Full name" },
+      { name: "emergencyContact2Relationship", label: "Contact 2 — Relationship", placeholder: "e.g. Parent" },
       { name: "emergencyContact2Cell", label: "Contact 2 — Cell", type: "tel" },
       { name: "emergencyContact2Work", label: "Contact 2 — Work", type: "tel" },
       { name: "emergencyContact2Other", label: "Contact 2 — Other Phone", type: "tel" },
@@ -154,6 +154,54 @@ function isValidUsPhone(value: string): boolean {
   return value.replace(/\D/g, "").length === 10;
 }
 
+/* ---- US date handling — mirrors the Ciyex EHR's masked MM/DD/YYYY inputs ---- */
+
+/** Mask raw input to MM/DD/YYYY (auto-inserts slashes, caps at 10 chars). */
+function maskUsDate(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+/** ISO (yyyy-mm-dd) → MM/DD/YYYY for display. */
+function isoToUsDate(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || "");
+  return m ? `${m[2]}/${m[3]}/${m[1]}` : "";
+}
+
+/** MM/DD/YYYY → ISO (yyyy-mm-dd), or "" when incomplete/invalid. */
+function usToIsoDate(us: string): string {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(us || "");
+  if (!m) return "";
+  const [, mm, dd, yyyy] = m;
+  const month = Number(mm), day = Number(dd), year = Number(yyyy);
+  if (year < 1900 || year > 2100 || month < 1 || month > 12) return "";
+  const daysInMonth = new Date(year, month, 0).getDate();
+  if (day < 1 || day > daysInMonth) return "";
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/* ---- ZIP → City/State auto-fill (Zippopotam, same source the EHR uses) ---- */
+const zipCache = new Map<string, { city: string; state: string } | null>();
+async function lookupZipCityState(zip: string): Promise<{ city: string; state: string } | null> {
+  if (zipCache.has(zip)) return zipCache.get(zip) ?? null;
+  try {
+    const res = await fetch(`https://api.zippopotam.us/us/${encodeURIComponent(zip)}`);
+    if (!res.ok) {
+      zipCache.set(zip, null);
+      return null;
+    }
+    const body = await res.json();
+    const place = Array.isArray(body?.places) ? body.places[0] : null;
+    const out = place ? { city: String(place["place name"] || ""), state: String(place["state"] || "") } : null;
+    zipCache.set(zip, out);
+    return out;
+  } catch {
+    return null;
+  }
+}
+
 export default function PatientIntakePage() {
   const params = useParams();
   const token = params?.token as string;
@@ -166,6 +214,9 @@ export default function PatientIntakePage() {
   const [submitted, setSubmitted] = useState(false);
   const [practiceName, setPracticeName] = useState<string>("");
   const [alert, setAlert] = useState<{ variant: "success" | "error"; title: string; message: string } | null>(null);
+  // City/State freeze after a successful ZIP auto-fill (mirrors the EHR's
+  // settings forms); typing a new ZIP releases them.
+  const [zipAutoFilled, setZipAutoFilled] = useState(false);
 
   // OTP gate — the form only unlocks after the patient verifies a code sent to
   // the same phone/email the intake link was sent to.
@@ -283,6 +334,19 @@ export default function PatientIntakePage() {
 
   function handleChange(name: string, value: string) {
     setResponses((prev) => ({ ...prev, [name]: value }));
+    if (name === "postalCode") {
+      const zip = value.replace(/\D/g, "");
+      if (zip.length === 5) {
+        void lookupZipCityState(zip).then((hit) => {
+          if (!hit || !hit.city) return;
+          setResponses((prev) => ({ ...prev, city: hit.city, state: hit.state }));
+          setZipAutoFilled(true);
+        });
+      } else if (zipAutoFilled) {
+        // ZIP dropped below 5 digits — release the frozen City/State.
+        setZipAutoFilled(false);
+      }
+    }
   }
 
   function firstMissingRequired(): FieldDef | undefined {
@@ -436,6 +500,7 @@ export default function PatientIntakePage() {
                     field={field}
                     value={responses[field.name] || ""}
                     onChange={handleChange}
+                    readOnly={zipAutoFilled && (field.name === "city" || field.name === "state")}
                   />
                 ))}
               </div>
@@ -465,10 +530,12 @@ function Field({
   field,
   value,
   onChange,
+  readOnly,
 }: {
   field: FieldDef;
   value: string;
   onChange: (name: string, value: string) => void;
+  readOnly?: boolean;
 }) {
   const span = field.colSpan === 2 ? "col-span-2" : "";
   const labelEl = (
@@ -478,6 +545,15 @@ function Field({
     </label>
   );
   const base = "w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white dark:bg-gray-900";
+
+  if (field.type === "date") {
+    return (
+      <div className={`space-y-0.5 ${span}`}>
+        {labelEl}
+        <UsDateInput field={field} value={value} onChange={onChange} base={base} />
+      </div>
+    );
+  }
 
   if (field.type === "textarea") {
     return (
@@ -526,8 +602,91 @@ function Field({
         maxLength={isTel ? 14 : undefined}
         placeholder={field.placeholder || (isTel ? "(555) 123-4567" : undefined)}
         value={value}
+        readOnly={readOnly}
         onChange={(e) => onChange(field.name, isTel ? formatUsPhone(e.target.value) : e.target.value)}
-        className={base}
+        className={`${base} ${readOnly ? "opacity-75 cursor-not-allowed" : ""}`}
+      />
+    </div>
+  );
+}
+
+/**
+ * MM/DD/YYYY masked text input with a native calendar picker — the same UX the
+ * Ciyex EHR uses for date fields. The typed value is masked as the user types;
+ * the calendar button opens the browser's date picker via a hidden
+ * <input type="date">. The stored response value stays ISO (yyyy-mm-dd).
+ */
+function UsDateInput({
+  field,
+  value,
+  onChange,
+  base,
+}: {
+  field: FieldDef;
+  value: string;
+  onChange: (name: string, value: string) => void;
+  base: string;
+}) {
+  const [text, setText] = useState(() => isoToUsDate(value) || value);
+  const pickerRef = useRef<HTMLInputElement>(null);
+
+  // External prefill (e.g. after OTP verify) — adopt it unless it matches what
+  // the current text already encodes.
+  useEffect(() => {
+    if (usToIsoDate(text) !== value) {
+      setText(isoToUsDate(value) || "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  function handleText(raw: string) {
+    const masked = maskUsDate(raw);
+    setText(masked);
+    onChange(field.name, usToIsoDate(masked));
+  }
+
+  function openPicker() {
+    const el = pickerRef.current;
+    if (!el) return;
+    if (typeof el.showPicker === "function") {
+      el.showPicker();
+    } else {
+      el.click();
+    }
+  }
+
+  return (
+    <div className="relative">
+      <input
+        name={field.name}
+        type="text"
+        inputMode="numeric"
+        maxLength={10}
+        placeholder="MM/DD/YYYY"
+        value={text}
+        onChange={(e) => handleText(e.target.value)}
+        className={`${base} pr-9`}
+      />
+      <button
+        type="button"
+        aria-label={`Open calendar for ${field.label}`}
+        onClick={openPicker}
+        className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-base leading-none p-1"
+      >
+        📅
+      </button>
+      <input
+        ref={pickerRef}
+        type="date"
+        tabIndex={-1}
+        aria-hidden="true"
+        value={value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : ""}
+        onChange={(e) => {
+          const iso = e.target.value;
+          setText(isoToUsDate(iso));
+          onChange(field.name, iso);
+        }}
+        className="absolute right-0 bottom-0 w-px h-px opacity-0 pointer-events-none"
       />
     </div>
   );
