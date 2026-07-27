@@ -611,10 +611,12 @@ function Field({
 }
 
 /**
- * MM/DD/YYYY masked text input with a native calendar picker — the same UX the
- * Ciyex EHR uses for date fields. The typed value is masked as the user types;
- * the calendar button opens the browser's date picker via a hidden
- * <input type="date">. The stored response value stays ISO (yyyy-mm-dd).
+ * MM/DD/YYYY masked text input with a calendar button that opens an in-page
+ * month grid — the same UX the Ciyex EHR uses for date fields. The browser's
+ * own `<input type="date">` picker is deliberately NOT used: it renders
+ * nothing at all in several of the browsers patients open these links in, so
+ * the calendar is drawn by the form itself. The stored response value stays
+ * ISO (yyyy-mm-dd).
  */
 function UsDateInput({
   field,
@@ -628,7 +630,8 @@ function UsDateInput({
   base: string;
 }) {
   const [text, setText] = useState(() => isoToUsDate(value) || value);
-  const pickerRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
   // External prefill (e.g. after OTP verify) — adopt it unless it matches what
   // the current text already encodes.
@@ -639,24 +642,37 @@ function UsDateInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
+  // Close the calendar on an outside click or Escape.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   function handleText(raw: string) {
     const masked = maskUsDate(raw);
     setText(masked);
     onChange(field.name, usToIsoDate(masked));
   }
 
-  function openPicker() {
-    const el = pickerRef.current;
-    if (!el) return;
-    if (typeof el.showPicker === "function") {
-      el.showPicker();
-    } else {
-      el.click();
-    }
+  function pick(iso: string) {
+    setText(isoToUsDate(iso));
+    onChange(field.name, iso);
+    setOpen(false);
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={wrapRef}>
       <input
         name={field.name}
         type="text"
@@ -665,29 +681,148 @@ function UsDateInput({
         placeholder="MM/DD/YYYY"
         value={text}
         onChange={(e) => handleText(e.target.value)}
+        onFocus={() => setOpen(false)}
         className={`${base} pr-9`}
       />
       <button
         type="button"
         aria-label={`Open calendar for ${field.label}`}
-        onClick={openPicker}
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
         className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-base leading-none p-1"
       >
         📅
       </button>
-      <input
-        ref={pickerRef}
-        type="date"
-        tabIndex={-1}
-        aria-hidden="true"
-        value={value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : ""}
-        onChange={(e) => {
-          const iso = e.target.value;
-          setText(isoToUsDate(iso));
-          onChange(field.name, iso);
-        }}
-        className="absolute right-0 bottom-0 w-px h-px opacity-0 pointer-events-none"
-      />
+      {open && <CalendarPopup value={usToIsoDate(text) || value} onPick={pick} onClear={() => pick("")} />}
+    </div>
+  );
+}
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/** Zero-padded ISO date for a Y/M/D triple (local, no timezone shifting). */
+function isoOf(year: number, month: number, day: number): string {
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/**
+ * Month-grid calendar shown under a date field. Patients most often fill a
+ * date of birth here, so the header exposes month + year as selects (paging a
+ * year at a time to 1930 is unusable on a phone).
+ */
+function CalendarPopup({
+  value,
+  onPick,
+  onClear,
+}: {
+  value: string;
+  onPick: (iso: string) => void;
+  onClear: () => void;
+}) {
+  const today = new Date();
+  const selected = /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+  const initial = selected ? new Date(`${selected}T00:00:00`) : today;
+  const [view, setView] = useState({ year: initial.getFullYear(), month: initial.getMonth() });
+
+  // Wide enough for a birth date or an insurance termination date.
+  const years: number[] = [];
+  for (let y = today.getFullYear() + 10; y >= 1900; y--) years.push(y);
+
+  const firstWeekday = new Date(view.year, view.month, 1).getDay();
+  const daysInMonth = new Date(view.year, view.month + 1, 0).getDate();
+  const cells: Array<number | null> = [
+    ...Array.from({ length: firstWeekday }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+
+  const step = (delta: number) => {
+    const m = view.month + delta;
+    setView({ year: view.year + Math.floor(m / 12), month: ((m % 12) + 12) % 12 });
+  };
+
+  const todayIso = isoOf(today.getFullYear(), today.getMonth(), today.getDate());
+  const navBtn = "px-2 py-0.5 rounded text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700";
+  const selectCls =
+    "text-xs px-1 py-0.5 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100";
+
+  return (
+    <div className="absolute z-30 mt-1 left-0 w-64 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg p-2">
+      <div className="flex items-center justify-between gap-1 mb-1.5">
+        <button type="button" aria-label="Previous month" className={navBtn} onClick={() => step(-1)}>
+          ‹
+        </button>
+        <div className="flex items-center gap-1">
+          <select
+            aria-label="Month"
+            className={selectCls}
+            value={view.month}
+            onChange={(e) => setView({ ...view, month: Number(e.target.value) })}
+          >
+            {MONTH_NAMES.map((m, i) => (
+              <option key={m} value={i}>
+                {m}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Year"
+            className={selectCls}
+            value={view.year}
+            onChange={(e) => setView({ ...view, year: Number(e.target.value) })}
+          >
+            {years.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button type="button" aria-label="Next month" className={navBtn} onClick={() => step(1)}>
+          ›
+        </button>
+      </div>
+
+      <div className="grid grid-cols-7 gap-0.5 text-[10px] text-center text-gray-400 dark:text-gray-500 mb-0.5">
+        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+          <div key={`${d}${i}`}>{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-0.5">
+        {cells.map((day, i) => {
+          if (day === null) return <div key={`pad${i}`} />;
+          const iso = isoOf(view.year, view.month, day);
+          const isSelected = iso === selected;
+          const isToday = iso === todayIso;
+          return (
+            <button
+              key={iso}
+              type="button"
+              onClick={() => onPick(iso)}
+              className={`h-7 rounded text-xs ${
+                isSelected
+                  ? "bg-blue-600 text-white font-semibold"
+                  : isToday
+                    ? "border border-blue-400 text-blue-600 dark:text-blue-300"
+                    : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
+            >
+              {day}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-between mt-1.5 text-[11px]">
+        <button type="button" className="text-blue-600 hover:underline" onClick={() => onPick(todayIso)}>
+          Today
+        </button>
+        <button type="button" className="text-gray-500 hover:underline dark:text-gray-400" onClick={onClear}>
+          Clear
+        </button>
+      </div>
     </div>
   );
 }
