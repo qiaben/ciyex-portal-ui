@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Alert from "@/components/ui/alert/Alert";
+import { useEnv } from "@/context/EnvContext";
 
 /* --------------------------------------------------------------------------
    Public patient-intake form.
@@ -205,7 +206,7 @@ async function lookupZipCityState(zip: string): Promise<{ city: string; state: s
 export default function PatientIntakePage() {
   const params = useParams();
   const token = params?.token as string;
-  const API = process.env.NEXT_PUBLIC_API_URL;
+  const API = useEnv().NEXT_PUBLIC_API_URL;
 
   const [responses, setResponses] = useState<Responses>({});
   const [loading, setLoading] = useState(true);
