@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import AdminLayout from "@/app/(admin)/layout";
 import { useBilling } from "@/hooks/useBilling";
+import { useStatements, downloadStatementPdf } from "@/hooks/useStatements";
 import { usePagination } from "@/hooks/usePagination";
 import Pagination from "@/components/tables/Pagination";
-import { Receipt, DollarSign, Clock, AlertCircle } from "lucide-react";
+import { Receipt, DollarSign, Clock, AlertCircle, Download, FileText } from "lucide-react";
 
 function statusBadge(status?: string) {
     const s = (status || "").toLowerCase();
@@ -30,6 +32,58 @@ function fmtMoney(v?: string) {
     return isNaN(n) ? "$0.00" : `$${n.toFixed(2)}`;
 }
 
+function StatementsSection() {
+    const { statements, loading } = useStatements();
+    const [busyId, setBusyId] = useState<string | null>(null);
+    const [err, setErr] = useState<string | null>(null);
+
+    const handleDownload = async (id: string, invoiceNumber?: string) => {
+        setErr(null);
+        setBusyId(id);
+        try {
+            await downloadStatementPdf(id, invoiceNumber);
+        } catch {
+            setErr("Could not download the PDF. Please try again or contact your provider.");
+        } finally {
+            setBusyId(null);
+        }
+    };
+
+    if (loading || statements.length === 0) return null;
+
+    return (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-blue-600" />
+                <h2 className="text-sm font-semibold text-gray-900">Downloadable Statements</h2>
+                <span className="text-xs text-gray-400">Invoices emailed to you — download a PDF copy anytime</span>
+            </div>
+            {err && <div className="px-4 py-2 text-xs text-red-600 bg-red-50">{err}</div>}
+            <ul className="divide-y divide-gray-100">
+                {statements.map((s) => (
+                    <li key={s.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{s.invoiceNumber}</p>
+                            <p className="text-xs text-gray-500">
+                                {s.status ? `${s.status} · ` : ""}
+                                Balance ${Number(s.balanceDue ?? 0).toFixed(2)} of ${Number(s.totalAmount ?? 0).toFixed(2)}
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => handleDownload(s.id, s.invoiceNumber)}
+                            disabled={busyId === s.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50 shrink-0"
+                        >
+                            <Download className="h-3.5 w-3.5" />
+                            {busyId === s.id ? "Preparing…" : "Download PDF"}
+                        </button>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
+
 export default function BillingPage() {
     const { invoices, loading, error } = useBilling();
     const { currentPage, totalPages, paginatedItems, onPageChange, totalItems, startItem, endItem } = usePagination(invoices, 10);
@@ -44,6 +98,8 @@ export default function BillingPage() {
                     <h1 className="text-2xl font-bold text-gray-900">Billing & Invoices</h1>
                     <p className="text-sm text-gray-500 mt-0.5">View your medical bills and payment history</p>
                 </div>
+
+                <StatementsSection />
 
                 {loading ? (
                     <div className="flex items-center justify-center py-20">

@@ -5,7 +5,7 @@ import AdminLayout from "@/app/(admin)/layout";
 import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { useProviders, useCareTeamProviders, Provider } from "@/hooks/useProviders";
 import {
-    MessageSquare, Send, Search, PenSquare, X, Paperclip, Pin,
+    MessageSquare, Send, Search, PenSquare, X, Pin, Download, FileText,
 } from "lucide-react";
 
 /* ───── types (matching EHR messaging backend) ───── */
@@ -607,36 +607,7 @@ function MsgItem({ msg, isMe, showHeader }: { msg: MessageItem; isMe: boolean; s
 
                 {/* Attachments */}
                 {msg.attachments && msg.attachments.length > 0 && (
-                    <div className="mt-2 space-y-1.5">
-                        {msg.attachments.map((a) => (
-                            <button
-                                key={a.id}
-                                type="button"
-                                onClick={async () => {
-                                    try {
-                                        const res = await fetchWithAuth(a.fileUrl);
-                                        if (!res.ok) throw new Error("Download failed");
-                                        const blob = await res.blob();
-                                        const url = URL.createObjectURL(blob);
-                                        const link = document.createElement("a");
-                                        link.href = url;
-                                        link.download = a.fileName;
-                                        document.body.appendChild(link);
-                                        link.click();
-                                        document.body.removeChild(link);
-                                        setTimeout(() => URL.revokeObjectURL(url), 1000);
-                                    } catch {
-                                        window.open(a.fileUrl, "_blank");
-                                    }
-                                }}
-                                className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-700 hover:bg-gray-200 transition-colors"
-                            >
-                                <Paperclip className="h-3.5 w-3.5 text-gray-500" />
-                                <span className="truncate max-w-[200px]">{a.fileName}</span>
-                                <span className="text-xs text-gray-400">{formatBytes(a.fileSize)}</span>
-                            </button>
-                        ))}
-                    </div>
+                    <AttachmentList attachments={msg.attachments} messageId={msg.id} />
                 )}
 
                 {/* Reactions */}
@@ -656,6 +627,145 @@ function MsgItem({ msg, isMe, showHeader }: { msg: MessageItem; isMe: boolean; s
                 )}
             </div>
         </div>
+    );
+}
+
+/* ── Attachment List ── */
+function AttachmentList({ attachments, messageId }: {
+    attachments: NonNullable<MessageItem["attachments"]>;
+    messageId: string;
+}) {
+    const [lightbox, setLightbox] = useState<string | null>(null);
+    const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
+
+    const images = attachments.filter((a) => a.fileType?.startsWith("image/"));
+    const files = attachments.filter((a) => !a.fileType?.startsWith("image/"));
+
+    // Fetch image blobs with auth so thumbnails render reliably (presigned URLs may be expired/blocked)
+    useEffect(() => {
+        let cancelled = false;
+        const created: string[] = [];
+        (async () => {
+            for (const img of images) {
+                if (imageUrls[img.id]) continue;
+                try {
+                    const res = await fetchWithAuth(`/api/messages/${messageId}/attachments/${img.id}/download`);
+                    if (!res.ok) continue;
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    created.push(url);
+                    if (cancelled) { URL.revokeObjectURL(url); return; }
+                    setImageUrls((prev) => ({ ...prev, [img.id]: url }));
+                } catch { /* ignore */ }
+            }
+        })();
+        return () => {
+            cancelled = true;
+            created.forEach((u) => URL.revokeObjectURL(u));
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [messageId, images.map((i) => i.id).join(",")]);
+
+    const handleDownload = async (att: NonNullable<MessageItem["attachments"]>[number]) => {
+        try {
+            const res = await fetchWithAuth(`/api/messages/${messageId}/attachments/${att.id}/download`);
+            if (!res.ok) throw new Error("Download failed");
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = att.fileName || "download";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch {
+            if (att.fileUrl) window.open(att.fileUrl, "_blank");
+        }
+    };
+
+    return (
+        <>
+            {lightbox && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
+                    onClick={() => setLightbox(null)}
+                >
+                    <button
+                        className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+                        onClick={() => setLightbox(null)}
+                    >
+                        <X className="h-5 w-5" />
+                    </button>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src={lightbox}
+                        alt="Preview"
+                        className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    />
+                </div>
+            )}
+
+            <div className="mt-2 space-y-2">
+                {images.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        {images.map((att) => {
+                            const src = imageUrls[att.id];
+                            return (
+                                <div key={att.id} className="group relative">
+                                    {src ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                            src={src}
+                                            alt={att.fileName}
+                                            className="h-48 max-w-xs cursor-zoom-in rounded-xl border border-gray-200 object-cover shadow-sm transition-transform hover:scale-[1.02]"
+                                            onClick={() => setLightbox(src)}
+                                        />
+                                    ) : (
+                                        <div className="h-48 w-48 rounded-xl border border-gray-200 bg-gray-100 flex items-center justify-center">
+                                            <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full" />
+                                        </div>
+                                    )}
+                                    <div className="absolute bottom-1.5 right-1.5 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                        <button
+                                            type="button"
+                                            className="rounded-lg bg-black/60 p-1.5 text-white backdrop-blur-sm hover:bg-black/80"
+                                            title="Download"
+                                            onClick={(e) => { e.stopPropagation(); handleDownload(att); }}
+                                        >
+                                            <Download className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {files.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                        {files.map((att) => (
+                            <button
+                                key={att.id}
+                                type="button"
+                                onClick={() => handleDownload(att)}
+                                className="flex items-center gap-2.5 rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-xs hover:bg-gray-100 transition-colors"
+                            >
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+                                    <FileText className="h-4 w-4 text-blue-600" />
+                                </div>
+                                <div className="min-w-0 text-left">
+                                    <p className="truncate max-w-[180px] font-medium text-gray-800">{att.fileName}</p>
+                                    <p className="text-gray-400">{formatBytes(att.fileSize)}</p>
+                                </div>
+                                <Download className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </>
     );
 }
 

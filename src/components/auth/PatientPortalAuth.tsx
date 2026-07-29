@@ -382,7 +382,7 @@ export default function PatientPortalAuth() {
 
                             <div className="flex justify-center">
                                 <ReCAPTCHA
-                                    sitekey={getEnv("NEXT_PUBLIC_RECAPTCHA_SITE_KEY") || "6Lc_DccrAAAAAOM3CVIEfqvGyqirsBZ32QhZuXYz"}
+                                    sitekey={getEnv("NEXT_PUBLIC_RECAPTCHA_SITE_KEY") as string}
                                     onChange={handleCaptcha}
                                 />
                             </div>
